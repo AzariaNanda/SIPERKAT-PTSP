@@ -41,17 +41,10 @@ export const exportMonthlyStats = (stats: MonthlyStats[], year: number) => {
   XLSX.writeFile(workbook, `Laporan_Peminjaman_${year}.xlsx`);
 };
 
-export const exportDetailedData = (
-  peminjaman: Peminjaman[], 
-  year: number, 
-  jenis: 'kendaraan' | 'ruangan',
-  getAssetName: (assetId: string, jenis: 'kendaraan' | 'ruangan') => string
-) => {
-  const filteredData = peminjaman.filter(p => p.jenis_asset === jenis);
-  
-  const data = filteredData.map(p => ({
+export const exportDetailedData = (peminjaman: Peminjaman[], year: number, month?: number) => {
+  const data = peminjaman.map(p => ({
     'Tanggal Pengajuan': new Date(p.timestamp).toLocaleDateString('id-ID'),
-    'Nama Aset': getAssetName(p.asset_id, p.jenis_asset),
+    'Jenis': p.jenis === 'kendaraan' ? 'Kendaraan' : 'Ruangan',
     'Nama Pemohon': p.nama_pemohon,
     'NIP': p.nip,
     'Unit/Bidang': p.unit,
@@ -62,19 +55,22 @@ export const exportDetailedData = (
     'Jam Selesai': p.jam_selesai,
     'Keperluan': p.keperluan,
     'Status': p.status,
+    'Memerlukan Supir': p.supir ? 'Ya' : 'Tidak',
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   
-  const sheetName = jenis === 'kendaraan' ? 'Kendaraan' : 'Ruangan';
+  const sheetName = month 
+    ? `Peminjaman Bulan ${month}` 
+    : `Peminjaman ${year}`;
   
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
   // Set column widths
   worksheet['!cols'] = [
     { wch: 18 },
-    { wch: 25 },
+    { wch: 12 },
     { wch: 25 },
     { wch: 20 },
     { wch: 20 },
@@ -85,8 +81,12 @@ export const exportDetailedData = (
     { wch: 10 },
     { wch: 40 },
     { wch: 12 },
+    { wch: 15 },
   ];
 
-  const jenisLabel = jenis === 'kendaraan' ? 'Kendaraan' : 'Ruangan';
-  XLSX.writeFile(workbook, `Detail_Peminjaman_${jenisLabel}_${year}.xlsx`);
+  const filename = month 
+    ? `Detail_Peminjaman_${year}_Bulan${month}.xlsx`
+    : `Detail_Peminjaman_${year}.xlsx`;
+    
+  XLSX.writeFile(workbook, filename);
 };

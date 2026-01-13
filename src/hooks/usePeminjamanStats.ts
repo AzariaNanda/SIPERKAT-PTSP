@@ -14,8 +14,8 @@ export const usePeminjamanStats = (peminjaman: Peminjaman[], year: number) => {
         return date.getFullYear() === year && date.getMonth() === index;
       });
 
-      const kendaraan = monthPeminjaman.filter(p => p.jenis_asset === 'kendaraan').length;
-      const ruangan = monthPeminjaman.filter(p => p.jenis_asset === 'ruangan').length;
+      const kendaraan = monthPeminjaman.filter(p => p.jenis === 'kendaraan').length;
+      const ruangan = monthPeminjaman.filter(p => p.jenis === 'ruangan').length;
 
       return {
         month: String(index + 1).padStart(2, '0'),

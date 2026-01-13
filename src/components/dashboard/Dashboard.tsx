@@ -34,6 +34,14 @@ export const Dashboard = ({ peminjaman, isAdmin, kendaraan, ruangan }: Dashboard
     }
   };
 
+  const handleExportKendaraan = () => {
+    exportMonthlyStats(monthlyStats, selectedYear, 'kendaraan');
+  };
+
+  const handleExportRuangan = () => {
+    exportMonthlyStats(monthlyStats, selectedYear, 'ruangan');
+  };
+
   const handleExportDetailKendaraan = () => {
     const yearPeminjaman = peminjaman.filter(p => {
       const date = new Date(p.timestamp);
