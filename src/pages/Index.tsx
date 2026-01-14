@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, ClipboardList, Car, Home, Send, History, Download, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Car, Home, Send, History, Download, Mail, Lock, LogIn } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +28,6 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,35 +49,11 @@ const LoginScreen = () => {
 
     setIsSubmitting(true);
 
-    if (isSignUpMode) {
-      // Sign up flow
-      const redirectUrl = `${window.location.origin}/`;
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl
-        }
-      });
-
-      if (error) {
-        if (error.message.includes('already registered')) {
-          toast.error('Email sudah terdaftar. Silakan login.');
-        } else {
-          toast.error(error.message);
-        }
-      } else {
-        toast.success('Akun berhasil dibuat! Silakan login.');
-        setIsSignUpMode(false);
-      }
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast.error(error);
     } else {
-      // Login flow
-      const { error } = await signIn(email, password);
-      if (error) {
-        toast.error(error);
-      } else {
-        toast.success('Login berhasil!');
-      }
+      toast.success('Login berhasil!');
     }
 
     setIsSubmitting(false);
@@ -172,20 +147,9 @@ const LoginScreen = () => {
             >
               {isSubmitting ? (
                 <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>Memproses...</>
-              ) : isSignUpMode ? (
-                <><UserPlus className="w-5 h-5" />Daftar</>
               ) : (
                 <><LogIn className="w-5 h-5" />Login</>
               )}
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsSignUpMode(!isSignUpMode)}
-              className="w-full text-muted-foreground"
-            >
-              {isSignUpMode ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}
             </Button>
           </form>
           
