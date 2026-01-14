@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, ClipboardList, Car, Home, Send, History, Download, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Car, Home, Send, History, Download, Mail, Lock, LogIn } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,8 +19,7 @@ import { exportKendaraanData, exportRuanganData } from '@/utils/exportSeparated'
 import { toast } from 'sonner';
 
 const LoginScreen = () => {
-  const { signIn, signUp, loading } = useAuth();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const { signIn, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,31 +32,35 @@ const LoginScreen = () => {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Password minimal 6 karakter');
-      return;
-    }
-
     setIsSubmitting(true);
 
-    if (isSignUp) {
-      const { error } = await signUp(email, password);
-      if (error) {
-        toast.error(error);
-      } else {
-        toast.success('Registrasi berhasil! Silakan login.');
-        setIsSignUp(false);
-        setPassword('');
-      }
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast.error(error);
     } else {
-      const { error } = await signIn(email, password);
-      if (error) {
-        toast.error(error);
-      } else {
-        toast.success('Login berhasil!');
-      }
+      toast.success('Login berhasil!');
     }
 
+    setIsSubmitting(false);
+  };
+
+  const handleQuickLogin = async (type: 'admin' | 'user') => {
+    setIsSubmitting(true);
+    
+    if (type === 'admin') {
+      setEmail('subbagumpeg.dpmptspbms@gmail.com');
+      setPassword('admin123');
+      const { error } = await signIn('subbagumpeg.dpmptspbms@gmail.com', 'admin123');
+      if (error) toast.error(error);
+      else toast.success('Login sebagai Admin berhasil!');
+    } else {
+      setEmail('dpmpptspkabbanyumas@gmail.com');
+      setPassword('user123');
+      const { error } = await signIn('dpmpptspkabbanyumas@gmail.com', 'user123');
+      if (error) toast.error(error);
+      else toast.success('Login sebagai User berhasil!');
+    }
+    
     setIsSubmitting(false);
   };
 
@@ -113,23 +116,11 @@ const LoginScreen = () => {
             >
               {isSubmitting ? (
                 <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>Memproses...</>
-              ) : isSignUp ? (
-                <><UserPlus className="w-5 h-5" />Daftar</>
               ) : (
                 <><LogIn className="w-5 h-5" />Login</>
               )}
             </Button>
           </form>
-
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-primary hover:underline"
-            >
-              {isSignUp ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}
-            </button>
-          </div>
           
           <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-sm text-amber-800 font-semibold mb-3 text-center">
@@ -145,6 +136,36 @@ const LoginScreen = () => {
                 <span className="break-all">dpmpptspkabbanyumas@gmail.com</span>
               </div>
             </div>
+          </div>
+
+          {/* Quick Login for Testing */}
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800 font-semibold mb-3 text-center">
+              🧪 Mode Testing - Quick Login
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                type="button"
+                variant="outline" 
+                className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
+                onClick={() => handleQuickLogin('admin')}
+                disabled={isSubmitting}
+              >
+                Login Admin
+              </Button>
+              <Button 
+                type="button"
+                variant="outline" 
+                className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
+                onClick={() => handleQuickLogin('user')}
+                disabled={isSubmitting}
+              >
+                Login User
+              </Button>
+            </div>
+            <p className="text-xs text-blue-600 mt-2 text-center">
+              Password: admin123 / user123
+            </p>
           </div>
         </CardContent>
       </Card>
