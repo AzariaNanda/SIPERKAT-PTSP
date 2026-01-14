@@ -29,7 +29,7 @@ export const PeminjamanForm = () => {
     tgl_selesai: '',
     jam_selesai: '',
     keperluan: '',
-    supir: '',
+    butuh_supir: '' as '' | 'ya' | 'tidak',
   });
 
   const handleSubmit = () => {
@@ -47,9 +47,9 @@ export const PeminjamanForm = () => {
       return;
     }
 
-    // Supir validation for kendaraan
-    if (formData.jenis_asset === 'kendaraan' && !formData.supir) {
-      toast.error('Mohon isi nama supir untuk peminjaman kendaraan');
+    // Butuh supir validation for kendaraan
+    if (formData.jenis_asset === 'kendaraan' && !formData.butuh_supir) {
+      toast.error('Mohon pilih apakah membutuhkan supir');
       return;
     }
 
@@ -102,7 +102,7 @@ export const PeminjamanForm = () => {
           tgl_selesai: '',
           jam_selesai: '',
           keperluan: '',
-          supir: '',
+          butuh_supir: '',
         });
       }
     });
@@ -193,18 +193,6 @@ export const PeminjamanForm = () => {
             />
           </div>
 
-          {formData.jenis_asset === 'kendaraan' && (
-            <div>
-              <Label htmlFor="supir">Nama Supir</Label>
-              <Input
-                id="supir"
-                value={formData.supir}
-                onChange={(e) => setFormData({ ...formData, supir: e.target.value })}
-                placeholder="Masukkan nama supir"
-                className="mt-2"
-              />
-            </div>
-          )}
 
           <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
@@ -260,6 +248,24 @@ export const PeminjamanForm = () => {
               rows={3}
             />
           </div>
+
+          {formData.jenis_asset === 'kendaraan' && (
+            <div className="md:col-span-2">
+              <Label htmlFor="butuh_supir">Apakah membutuhkan supir?</Label>
+              <Select
+                value={formData.butuh_supir}
+                onValueChange={(value: 'ya' | 'tidak') => setFormData({ ...formData, butuh_supir: value })}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Pilih jawaban" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ya">Iya</SelectItem>
+                  <SelectItem value="tidak">Tidak</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <Button 
