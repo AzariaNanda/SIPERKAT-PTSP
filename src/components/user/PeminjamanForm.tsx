@@ -251,19 +251,25 @@ export const PeminjamanForm = () => {
 
           {formData.jenis_asset === 'kendaraan' && (
             <div className="md:col-span-2">
-              <Label htmlFor="butuh_supir">Apakah membutuhkan supir?</Label>
-              <Select
-                value={formData.butuh_supir}
-                onValueChange={(value: 'ya' | 'tidak') => setFormData({ ...formData, butuh_supir: value })}
-              >
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Pilih jawaban" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ya">Iya</SelectItem>
-                  <SelectItem value="tidak">Tidak</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Apakah membutuhkan supir?</Label>
+              <div className="flex gap-3 mt-2">
+                <Button
+                  type="button"
+                  variant={formData.butuh_supir === 'ya' ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setFormData({ ...formData, butuh_supir: 'ya' })}
+                >
+                  Iya
+                </Button>
+                <Button
+                  type="button"
+                  variant={formData.butuh_supir === 'tidak' ? 'default' : 'outline'}
+                  className="flex-1"
+                  onClick={() => setFormData({ ...formData, butuh_supir: 'tidak' })}
+                >
+                  Tidak
+                </Button>
+              </div>
             </div>
           )}
         </div>
