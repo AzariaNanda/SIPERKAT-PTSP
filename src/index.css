@@ -35,6 +35,9 @@ All colors MUST be HSL.
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
+    --room: 30 50% 70%;
+    --room-foreground: 30 50% 20%;
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
@@ -87,6 +90,9 @@ All colors MUST be HSL.
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+
+    --room: 30 45% 60%;
+    --room-foreground: 30 50% 15%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;

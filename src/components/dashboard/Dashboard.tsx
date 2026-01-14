@@ -55,8 +55,14 @@ export const Dashboard = ({ isAdmin }: DashboardProps) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Total Peminjaman" value={yearlyTotals.total} icon={Calendar} description={`Tahun ${selectedYear}`} variant="primary" />
         <StatCard title="Peminjaman Kendaraan" value={yearlyTotals.kendaraan} icon={Car} description={`Tahun ${selectedYear}`} variant="accent" />
-        <StatCard title="Peminjaman Ruangan" value={yearlyTotals.ruangan} icon={Home} description={`Tahun ${selectedYear}`} variant="success" />
-        <StatCard title={isAdmin ? "Menunggu Persetujuan" : "Disetujui"} value={isAdmin ? pendingCount : approvedCount} icon={isAdmin ? Clock : CheckCircle} description="Status pengajuan" variant="warning" />
+        <StatCard title="Peminjaman Ruangan" value={yearlyTotals.ruangan} icon={Home} description={`Tahun ${selectedYear}`} variant="room" />
+        <StatCard 
+          title={isAdmin ? "Menunggu Persetujuan" : "Disetujui"} 
+          value={isAdmin ? pendingCount : approvedCount} 
+          icon={isAdmin ? Clock : CheckCircle} 
+          description="Status pengajuan" 
+          variant={isAdmin ? "warning" : "success"} 
+        />
       </div>
 
       <MonthlyChart data={monthlyStats} year={selectedYear} />

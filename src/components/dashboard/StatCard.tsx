@@ -7,7 +7,7 @@ interface StatCardProps {
   value: number | string;
   icon: LucideIcon;
   description?: string;
-  variant?: 'primary' | 'accent' | 'success' | 'warning';
+  variant?: 'primary' | 'accent' | 'success' | 'warning' | 'room';
 }
 
 const variantStyles = {
@@ -15,6 +15,7 @@ const variantStyles = {
   accent: 'bg-accent text-accent-foreground',
   success: 'bg-success text-success-foreground',
   warning: 'bg-warning text-warning-foreground',
+  room: 'bg-room text-room-foreground',
 };
 
 export const StatCard = ({ 
