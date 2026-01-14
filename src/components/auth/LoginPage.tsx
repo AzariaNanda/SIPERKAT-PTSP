@@ -47,12 +47,11 @@ export const LoginPage = ({ onLogin, loading }: LoginPageProps) => {
           
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <p className="text-xs text-muted-foreground text-center">
-              <span className="font-semibold">Akses Terbatas:</span> Hanya email terdaftar yang dapat mengakses sistem ini
+              <span className="font-semibold">Akses Terbatas:</span> Hanya pegawai DPMPTSP yang terdaftar yang dapat mengakses sistem ini.
             </p>
-            <div className="mt-3 text-xs text-muted-foreground space-y-1">
-              <p>• <strong>Admin:</strong> subbagumpeg.dpmptspbms@gmail.com</p>
-              <p>• <strong>User:</strong> dpmpptspkabbanyumas@gmail.com</p>
-            </div>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Hubungi administrator jika Anda memerlukan akses.
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -4,10 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { AppRole } from '@/types/siperkat';
 
-const ADMIN_EMAIL = 'subbagumpeg.dpmptspbms@gmail.com';
-const USER_EMAIL = 'dpmpptspkabbanyumas@gmail.com';
-const ALLOWED_EMAILS = [ADMIN_EMAIL, USER_EMAIL];
-
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -22,19 +18,10 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Check if email is allowed
-          const email = session.user.email;
-          if (email && !ALLOWED_EMAILS.includes(email)) {
-            // Unauthorized email - sign out
-            setTimeout(() => {
-              handleUnauthorizedAccess();
-            }, 0);
-          } else {
-            // Set role based on email
-            setTimeout(() => {
-              fetchUserRole(session.user.id, session.user.email);
-            }, 0);
-          }
+          // Fetch role from database - this is the source of truth
+          setTimeout(() => {
+            fetchUserRole(session.user.id);
+          }, 0);
         } else {
           setRole(null);
         }
@@ -48,12 +35,7 @@ export const useAuth = () => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        const email = session.user.email;
-        if (email && !ALLOWED_EMAILS.includes(email)) {
-          handleUnauthorizedAccess();
-        } else {
-          fetchUserRole(session.user.id, session.user.email);
-        }
+        fetchUserRole(session.user.id);
       }
       setLoading(false);
     });
@@ -61,40 +43,33 @@ export const useAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleUnauthorizedAccess = async () => {
-    toast.error('Akses Ditolak. Email tidak terdaftar dalam sistem.');
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setRole(null);
-  };
-
-  const fetchUserRole = async (userId: string, email: string | undefined) => {
+  const fetchUserRole = async (userId: string) => {
     try {
-      // First try to get role from database
+      // Get role from database - only authorized users will have a role
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .single();
 
-      if (data) {
-        setRole(data.role as AppRole);
-      } else {
-        // Fallback to email-based role assignment
-        if (email === ADMIN_EMAIL) {
-          setRole('admin');
-        } else if (email === USER_EMAIL) {
-          setRole('user');
-        }
+      if (error || !data) {
+        // No role found - user is not authorized
+        toast.error('Akses Ditolak. Anda tidak memiliki akses ke sistem ini.');
+        await supabase.auth.signOut();
+        setUser(null);
+        setSession(null);
+        setRole(null);
+        return;
       }
+
+      setRole(data.role as AppRole);
     } catch (error) {
-      // Fallback to email-based role
-      if (email === ADMIN_EMAIL) {
-        setRole('admin');
-      } else if (email === USER_EMAIL) {
-        setRole('user');
-      }
+      // Error fetching role - sign out for security
+      toast.error('Gagal memverifikasi akses. Silakan coba lagi.');
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setRole(null);
     }
   };
 
