@@ -29,7 +29,6 @@ export const PeminjamanForm = () => {
     tgl_selesai: '',
     jam_selesai: '',
     keperluan: '',
-    supir: '',
   });
 
   const handleSubmit = () => {
@@ -38,18 +37,6 @@ export const PeminjamanForm = () => {
         !formData.asset_id || !formData.tgl_mulai || !formData.jam_mulai || 
         !formData.tgl_selesai || !formData.jam_selesai || !formData.keperluan) {
       toast.error('Mohon lengkapi semua field');
-      return;
-    }
-
-    // NIP minimal 11 karakter
-    if (formData.nip.length < 11) {
-      toast.error('NIP minimal 11 karakter');
-      return;
-    }
-
-    // Supir wajib untuk kendaraan
-    if (formData.jenis_asset === 'kendaraan' && !formData.supir) {
-      toast.error('Mohon isi nama supir untuk peminjaman kendaraan');
       return;
     }
 
@@ -102,7 +89,6 @@ export const PeminjamanForm = () => {
           tgl_selesai: '',
           jam_selesai: '',
           keperluan: '',
-          supir: '',
         });
       }
     });
@@ -158,19 +144,6 @@ export const PeminjamanForm = () => {
             </Select>
           </div>
 
-          {formData.jenis_asset === 'kendaraan' && (
-            <div>
-              <Label htmlFor="supir">Nama Supir</Label>
-              <Input
-                id="supir"
-                value={formData.supir}
-                onChange={(e) => setFormData({ ...formData, supir: e.target.value })}
-                placeholder="Masukkan nama supir"
-                className="mt-2"
-              />
-            </div>
-          )}
-
           <div>
             <Label htmlFor="nama_pemohon">Nama Pemohon</Label>
             <Input
@@ -183,14 +156,13 @@ export const PeminjamanForm = () => {
           </div>
 
           <div>
-            <Label htmlFor="nip">NIP (minimal 11 karakter)</Label>
+            <Label htmlFor="nip">NIP</Label>
             <Input
               id="nip"
               value={formData.nip}
               onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
               placeholder="Masukkan NIP"
               className="mt-2"
-              minLength={11}
             />
           </div>
 

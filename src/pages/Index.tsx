@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, ClipboardList, Car, Home, Send, History, Download, Mail, Lock, LogIn } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Car, Home, Send, History, Download, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { useAuth, AuthProvider } from '@/contexts/AuthContext';
 import { usePeminjaman } from '@/hooks/usePeminjaman';
 import { exportKendaraanData, exportRuanganData } from '@/utils/exportSeparated';
 import { toast } from 'sonner';
-
+import { supabase } from '@/integrations/supabase/client';
 
 const ADMIN_EMAIL = 'subbagumpeg.dpmptspbms@gmail.com';
 const USER_EMAIL = 'dpmpptspkabbanyumas@gmail.com';
@@ -28,7 +28,7 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,17 +50,75 @@ const LoginScreen = () => {
 
     setIsSubmitting(true);
 
-    // Login flow
-    const { error } = await signIn(email, password);
-    if (error) {
-      toast.error(error);
+    if (isSignUpMode) {
+      // Sign up flow
+      const redirectUrl = `${window.location.origin}/`;
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          toast.error('Email sudah terdaftar. Silakan login.');
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        toast.success('Akun berhasil dibuat! Silakan login.');
+        setIsSignUpMode(false);
+      }
     } else {
-      toast.success('Login berhasil!');
+      // Login flow
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success('Login berhasil!');
+      }
     }
 
     setIsSubmitting(false);
   };
 
+  const handleQuickSignUp = async (type: 'admin' | 'user') => {
+    const selectedEmail = type === 'admin' ? ADMIN_EMAIL : USER_EMAIL;
+    const selectedPassword = type === 'admin' ? 'admin123' : 'user123';
+    
+    setIsSubmitting(true);
+    
+    const redirectUrl = `${window.location.origin}/`;
+    const { error } = await supabase.auth.signUp({
+      email: selectedEmail,
+      password: selectedPassword,
+      options: {
+        emailRedirectTo: redirectUrl
+      }
+    });
+
+    if (error) {
+      if (error.message.includes('already registered')) {
+        toast.info('Akun sudah ada. Mencoba login...');
+        const { error: loginError } = await signIn(selectedEmail, selectedPassword);
+        if (loginError) toast.error(loginError);
+        else toast.success(`Login sebagai ${type === 'admin' ? 'Admin' : 'User'} berhasil!`);
+      } else {
+        toast.error(error.message);
+      }
+    } else {
+      toast.success(`Akun ${type === 'admin' ? 'Admin' : 'User'} berhasil dibuat! Mencoba login...`);
+      // Auto login after signup
+      const { error: loginError } = await signIn(selectedEmail, selectedPassword);
+      if (!loginError) {
+        toast.success(`Login sebagai ${type === 'admin' ? 'Admin' : 'User'} berhasil!`);
+      }
+    }
+    
+    setIsSubmitting(false);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-accent flex items-center justify-center p-4">
@@ -114,9 +172,20 @@ const LoginScreen = () => {
             >
               {isSubmitting ? (
                 <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-foreground"></div>Memproses...</>
+              ) : isSignUpMode ? (
+                <><UserPlus className="w-5 h-5" />Daftar</>
               ) : (
                 <><LogIn className="w-5 h-5" />Login</>
               )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsSignUpMode(!isSignUpMode)}
+              className="w-full text-muted-foreground"
+            >
+              {isSignUpMode ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}
             </Button>
           </form>
           
@@ -136,6 +205,35 @@ const LoginScreen = () => {
             </div>
           </div>
 
+          {/* Quick Setup for Testing */}
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800 font-semibold mb-3 text-center">
+              🚀 Setup Cepat - Buat & Login Akun Demo
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                type="button"
+                variant="outline" 
+                className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
+                onClick={() => handleQuickSignUp('admin')}
+                disabled={isSubmitting}
+              >
+                Setup Admin
+              </Button>
+              <Button 
+                type="button"
+                variant="outline" 
+                className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
+                onClick={() => handleQuickSignUp('user')}
+                disabled={isSubmitting}
+              >
+                Setup User
+              </Button>
+            </div>
+            <p className="text-xs text-blue-600 mt-2 text-center">
+              Klik untuk membuat akun (jika belum ada) dan login otomatis
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
