@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, Car, Home, MapPin, Users } from 'lucide-react';
 import type { Kendaraan, Ruangan } from '@/types/siperkat';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 
 interface AssetCardProps {
   asset: Kendaraan | Ruangan;
@@ -15,13 +16,20 @@ export const AssetCard = ({ asset, type, isAdmin, onEdit, onDelete }: AssetCardP
   const isKendaraan = type === 'kendaraan';
   const kendaraan = asset as Kendaraan;
   const ruangan = asset as Ruangan;
+  
+  // Use signed URL for private bucket access
+  const { signedUrl, loading: imageLoading } = useSignedUrl(asset.foto_url);
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="aspect-video bg-muted relative overflow-hidden">
-        {asset.foto_url ? (
+        {imageLoading ? (
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : signedUrl ? (
           <img
-            src={asset.foto_url}
+            src={signedUrl}
             alt={isKendaraan ? kendaraan.nama_kendaraan : ruangan.nama_ruangan}
             className="w-full h-full object-cover"
           />

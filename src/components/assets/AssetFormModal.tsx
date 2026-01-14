@@ -7,6 +7,7 @@ import { Upload, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Kendaraan, Ruangan } from '@/types/siperkat';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 
 interface AssetFormModalProps {
   open: boolean;
@@ -36,6 +37,9 @@ export const AssetFormModal = ({
     kapasitas: 10,
     foto_url: '',
   });
+  
+  // Use signed URL for preview
+  const { signedUrl: previewUrl, loading: previewLoading } = useSignedUrl(formData.foto_url);
 
   useEffect(() => {
     if (asset && mode === 'edit') {
@@ -101,11 +105,8 @@ export const AssetFormModal = ({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('assets')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, foto_url: publicUrl });
+      // Store the file path (not URL) for signed URL generation later
+      setFormData({ ...formData, foto_url: filePath });
       toast.success('Foto berhasil diupload');
     } catch (error: any) {
       toast.error('Gagal upload foto: ' + error.message);
@@ -222,11 +223,17 @@ export const AssetFormModal = ({
             <Label>Foto</Label>
             {formData.foto_url ? (
               <div className="relative">
-                <img 
-                  src={formData.foto_url} 
-                  alt="Preview" 
-                  className="w-full h-40 object-cover rounded-lg"
-                />
+                {previewLoading ? (
+                  <div className="w-full h-40 flex items-center justify-center bg-muted rounded-lg">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : (
+                  <img 
+                    src={previewUrl || formData.foto_url} 
+                    alt="Preview" 
+                    className="w-full h-40 object-cover rounded-lg"
+                  />
+                )}
                 <Button
                   type="button"
                   size="icon"
