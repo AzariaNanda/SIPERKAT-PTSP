@@ -29,6 +29,7 @@ export const PeminjamanForm = () => {
     tgl_selesai: '',
     jam_selesai: '',
     keperluan: '',
+    supir: '',
   });
 
   const handleSubmit = () => {
@@ -37,6 +38,18 @@ export const PeminjamanForm = () => {
         !formData.asset_id || !formData.tgl_mulai || !formData.jam_mulai || 
         !formData.tgl_selesai || !formData.jam_selesai || !formData.keperluan) {
       toast.error('Mohon lengkapi semua field');
+      return;
+    }
+
+    // NIP validation - minimal 11 karakter
+    if (formData.nip.length < 11) {
+      toast.error('NIP minimal 11 karakter');
+      return;
+    }
+
+    // Supir validation for kendaraan
+    if (formData.jenis_asset === 'kendaraan' && !formData.supir) {
+      toast.error('Mohon isi nama supir untuk peminjaman kendaraan');
       return;
     }
 
@@ -89,6 +102,7 @@ export const PeminjamanForm = () => {
           tgl_selesai: '',
           jam_selesai: '',
           keperluan: '',
+          supir: '',
         });
       }
     });
@@ -161,9 +175,11 @@ export const PeminjamanForm = () => {
               id="nip"
               value={formData.nip}
               onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
-              placeholder="Masukkan NIP"
+              placeholder="Masukkan NIP (minimal 11 karakter)"
               className="mt-2"
+              minLength={11}
             />
+            <p className="text-xs text-muted-foreground mt-1">Minimal 11 karakter</p>
           </div>
 
           <div>
@@ -176,6 +192,19 @@ export const PeminjamanForm = () => {
               className="mt-2"
             />
           </div>
+
+          {formData.jenis_asset === 'kendaraan' && (
+            <div>
+              <Label htmlFor="supir">Nama Supir</Label>
+              <Input
+                id="supir"
+                value={formData.supir}
+                onChange={(e) => setFormData({ ...formData, supir: e.target.value })}
+                placeholder="Masukkan nama supir"
+                className="mt-2"
+              />
+            </div>
+          )}
 
           <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
