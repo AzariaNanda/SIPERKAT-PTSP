@@ -82,6 +82,7 @@ export const PeminjamanForm = () => {
       jam_selesai: formData.jam_selesai,
       keperluan: formData.keperluan,
       status: conflicts.length > 0 ? 'Konflik' : 'Pending',
+      butuh_supir: formData.jenis_asset === 'kendaraan' ? formData.butuh_supir : null,
     };
 
     if (conflicts.length > 0) {

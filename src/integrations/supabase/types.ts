@@ -17,6 +17,7 @@ export type Database = {
       data_peminjaman: {
         Row: {
           asset_id: string
+          butuh_supir: string | null
           catatan_admin: string | null
           created_at: string
           email: string
@@ -37,6 +38,7 @@ export type Database = {
         }
         Insert: {
           asset_id: string
+          butuh_supir?: string | null
           catatan_admin?: string | null
           created_at?: string
           email: string
@@ -57,6 +59,7 @@ export type Database = {
         }
         Update: {
           asset_id?: string
+          butuh_supir?: string | null
           catatan_admin?: string | null
           created_at?: string
           email?: string

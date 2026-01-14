@@ -89,6 +89,7 @@ export const PengajuanManagement = () => {
                   <TableHead>Aset</TableHead>
                   <TableHead>Jadwal</TableHead>
                   <TableHead>Keperluan</TableHead>
+                  <TableHead>Supir</TableHead>
                   <TableHead className="min-w-[200px]">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -123,6 +124,19 @@ export const PengajuanManagement = () => {
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate" title={item.keperluan}>
                       {item.keperluan}
+                    </TableCell>
+                    <TableCell>
+                      {item.jenis_asset === 'kendaraan' ? (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          item.butuh_supir === 'ya' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {item.butuh_supir === 'ya' ? 'Butuh' : 'Tidak'}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <StatusButtons
