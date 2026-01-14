@@ -22,18 +22,11 @@ const ADMIN_EMAIL = 'subbagumpeg.dpmptspbms@gmail.com';
 const USER_EMAIL = 'dpmpptspkabbanyumas@gmail.com';
 const ALLOWED_EMAILS = [ADMIN_EMAIL, USER_EMAIL];
 
-// Test/Demo credentials for development
-const TEST_CREDENTIALS = {
-  admin: { email: ADMIN_EMAIL, password: 'admin123', role: 'admin' as AppRole },
-  user: { email: USER_EMAIL, password: 'user123', role: 'user' as AppRole },
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole>(null);
   const [loading, setLoading] = useState(true);
-  const [isDemoMode, setIsDemoMode] = useState(false);
 
   const fetchUserRole = async (userId: string) => {
     try {
@@ -59,17 +52,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Check for demo session in localStorage
-    const demoSession = localStorage.getItem('siperkat_demo_session');
-    if (demoSession) {
-      const demo = JSON.parse(demoSession);
-      setUser({ id: demo.id, email: demo.email } as User);
-      setRole(demo.role);
-      setIsDemoMode(true);
-      setLoading(false);
-      return;
-    }
-
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -111,38 +93,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
-    // Check for demo/test credentials first
-    const adminTest = TEST_CREDENTIALS.admin;
-    const userTest = TEST_CREDENTIALS.user;
-
-    if (email === adminTest.email && password === adminTest.password) {
-      // Demo admin login
-      const demoSession = {
-        id: 'demo-admin-id',
-        email: adminTest.email,
-        role: adminTest.role,
-      };
-      localStorage.setItem('siperkat_demo_session', JSON.stringify(demoSession));
-      setUser({ id: demoSession.id, email: demoSession.email } as User);
-      setRole(demoSession.role);
-      setIsDemoMode(true);
-      return { error: null };
-    }
-
-    if (email === userTest.email && password === userTest.password) {
-      // Demo user login
-      const demoSession = {
-        id: 'demo-user-id',
-        email: userTest.email,
-        role: userTest.role,
-      };
-      localStorage.setItem('siperkat_demo_session', JSON.stringify(demoSession));
-      setUser({ id: demoSession.id, email: demoSession.email } as User);
-      setRole(demoSession.role);
-      setIsDemoMode(true);
-      return { error: null };
-    }
-
     // Check if email is allowed
     if (!ALLOWED_EMAILS.includes(email)) {
       return { error: 'Akses Ditolak. Email tidak terdaftar dalam sistem.' };
@@ -165,17 +115,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    // Clear demo session if exists
-    if (isDemoMode) {
-      localStorage.removeItem('siperkat_demo_session');
-      setUser(null);
-      setSession(null);
-      setRole(null);
-      setIsDemoMode(false);
-      toast.success('Logout berhasil');
-      return;
-    }
-
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast.error('Gagal logout: ' + error.message);
