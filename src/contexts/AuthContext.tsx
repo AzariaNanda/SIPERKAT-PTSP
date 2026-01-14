@@ -115,15 +115,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error('Gagal logout: ' + error.message);
-    } else {
-      setUser(null);
-      setSession(null);
-      setRole(null);
-      toast.success('Logout berhasil');
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      // Ignore signOut errors - session might already be invalid
+      console.log('SignOut completed (session may have been expired)');
     }
+    // Always clear local state regardless of API response
+    setUser(null);
+    setSession(null);
+    setRole(null);
+    toast.success('Logout berhasil');
   };
 
   const value: AuthContextType = {
