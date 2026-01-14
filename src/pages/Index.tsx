@@ -47,10 +47,20 @@ const LoginScreen = () => {
             )}
           </Button>
           
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-xs text-muted-foreground text-center">
-              <span className="font-semibold">Akses Terbatas:</span> Hanya pengguna terdaftar yang dapat mengakses sistem ini
+          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800 font-semibold mb-3 text-center">
+              Akses Terbatas: Hanya email terdaftar yang dapat mengakses sistem ini
             </p>
+            <div className="space-y-2 text-sm text-amber-700">
+              <div className="flex items-start gap-2">
+                <span className="font-medium">• Admin:</span>
+                <span className="break-all">subbagumpeg.dpmptspbms@gmail.com</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-medium">• User:</span>
+                <span className="break-all">dpmpptspkabbanyumas@gmail.com</span>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
