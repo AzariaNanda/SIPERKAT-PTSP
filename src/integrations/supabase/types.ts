@@ -163,7 +163,72 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      data_peminjaman_masked: {
+        Row: {
+          asset_id: string | null
+          butuh_supir: string | null
+          catatan_admin: string | null
+          created_at: string | null
+          email: string | null
+          id: string | null
+          jam_mulai: string | null
+          jam_selesai: string | null
+          jenis_asset: Database["public"]["Enums"]["jenis_asset"] | null
+          keperluan: string | null
+          nama_pemohon: string | null
+          nip: string | null
+          status: Database["public"]["Enums"]["status_peminjaman"] | null
+          tgl_mulai: string | null
+          tgl_selesai: string | null
+          timestamp: string | null
+          unit: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          butuh_supir?: string | null
+          catatan_admin?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          jam_mulai?: string | null
+          jam_selesai?: string | null
+          jenis_asset?: Database["public"]["Enums"]["jenis_asset"] | null
+          keperluan?: string | null
+          nama_pemohon?: string | null
+          nip?: never
+          status?: Database["public"]["Enums"]["status_peminjaman"] | null
+          tgl_mulai?: string | null
+          tgl_selesai?: string | null
+          timestamp?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          butuh_supir?: string | null
+          catatan_admin?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          jam_mulai?: string | null
+          jam_selesai?: string | null
+          jenis_asset?: Database["public"]["Enums"]["jenis_asset"] | null
+          keperluan?: string | null
+          nama_pemohon?: string | null
+          nip?: never
+          status?: Database["public"]["Enums"]["status_peminjaman"] | null
+          tgl_mulai?: string | null
+          tgl_selesai?: string | null
+          timestamp?: string | null
+          unit?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {

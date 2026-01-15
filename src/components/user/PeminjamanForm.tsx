@@ -10,11 +10,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePeminjaman, type PeminjamanInsert, type JenisAsset } from '@/hooks/usePeminjaman';
 import { useKendaraan } from '@/hooks/useKendaraan';
 import { useRuangan } from '@/hooks/useRuangan';
+import { BookingCalendar } from './BookingCalendar';
 import { toast } from 'sonner';
 
 export const PeminjamanForm = () => {
   const { user } = useAuth();
-  const { addPeminjaman, checkScheduleConflict } = usePeminjaman();
+  const { addPeminjaman, checkScheduleConflict, peminjamanList } = usePeminjaman();
   const { kendaraanList } = useKendaraan();
   const { ruanganList } = useRuangan();
 
@@ -41,9 +42,13 @@ export const PeminjamanForm = () => {
       return;
     }
 
-    // NIP validation - minimal 11 karakter
+    // NIP validation - minimal 11 digit, hanya angka
     if (formData.nip.length < 11) {
-      toast.error('NIP minimal 11 karakter');
+      toast.error('NIP minimal 11 digit');
+      return;
+    }
+    if (!/^\d+$/.test(formData.nip)) {
+      toast.error('NIP hanya boleh berisi angka');
       return;
     }
 
@@ -111,178 +116,211 @@ export const PeminjamanForm = () => {
 
   const availableAssets = formData.jenis_asset === 'kendaraan' ? kendaraanList : ruanganList;
 
+  // Handle date selection from calendar
+  const handleCalendarDateSelect = (date: Date) => {
+    const formattedDate = date.toISOString().split('T')[0];
+    if (!formData.tgl_mulai) {
+      setFormData({ ...formData, tgl_mulai: formattedDate, tgl_selesai: formattedDate });
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Send className="w-5 h-5" />
-          Form Pengajuan Peminjaman
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Label htmlFor="jenis_asset">Jenis Aset</Label>
-            <Select
-              value={formData.jenis_asset}
-              onValueChange={(value: JenisAsset) => setFormData({ ...formData, jenis_asset: value, asset_id: '' })}
-            >
-              <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Pilih jenis aset" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="kendaraan">Kendaraan</SelectItem>
-                <SelectItem value="ruangan">Ruang Rapat</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Booking Calendar */}
+      <div className="lg:col-span-1">
+        <BookingCalendar
+          bookings={peminjamanList}
+          selectedAssetId={formData.asset_id}
+          jenisAsset={formData.jenis_asset}
+          onDateSelect={handleCalendarDateSelect}
+        />
+      </div>
 
-          <div>
-            <Label htmlFor="asset_id">Pilih {formData.jenis_asset === 'kendaraan' ? 'Kendaraan' : 'Ruangan'}</Label>
-            <Select
-              value={formData.asset_id}
-              onValueChange={(value) => setFormData({ ...formData, asset_id: value })}
-            >
-              <SelectTrigger className="mt-2">
-                <SelectValue placeholder={`Pilih ${formData.jenis_asset}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableAssets.map((asset) => (
-                  <SelectItem key={asset.id} value={asset.id}>
-                    {formData.jenis_asset === 'kendaraan' 
-                      ? `${(asset as any).nama_kendaraan} (${(asset as any).no_polisi})`
-                      : (asset as any).nama_ruangan
-                    }
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="nama_pemohon">Nama Pemohon</Label>
-            <Input
-              id="nama_pemohon"
-              value={formData.nama_pemohon}
-              onChange={(e) => setFormData({ ...formData, nama_pemohon: e.target.value })}
-              placeholder="Masukkan nama lengkap"
-              className="mt-2"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="nip">NIP</Label>
-            <Input
-              id="nip"
-              value={formData.nip}
-              onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
-              placeholder="Masukkan NIP (minimal 11 karakter)"
-              className="mt-2"
-              minLength={11}
-            />
-            <p className="text-xs text-muted-foreground mt-1">Minimal 11 karakter</p>
-          </div>
-
-          <div>
-            <Label htmlFor="unit">Unit/Bidang</Label>
-            <Input
-              id="unit"
-              value={formData.unit}
-              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              placeholder="Masukkan unit/bidang"
-              className="mt-2"
-            />
-          </div>
-
-
-          <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Form */}
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Send className="w-5 h-5" />
+            Form Pengajuan Peminjaman
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="tgl_mulai">Tanggal Mulai</Label>
+              <Label htmlFor="jenis_asset">Jenis Aset</Label>
+              <Select
+                value={formData.jenis_asset}
+                onValueChange={(value: JenisAsset) => setFormData({ ...formData, jenis_asset: value, asset_id: '' })}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Pilih jenis aset" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="kendaraan">Kendaraan</SelectItem>
+                  <SelectItem value="ruangan">Ruang Rapat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="asset_id">Pilih {formData.jenis_asset === 'kendaraan' ? 'Kendaraan' : 'Ruangan'}</Label>
+              <Select
+                value={formData.asset_id}
+                onValueChange={(value) => setFormData({ ...formData, asset_id: value })}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder={`Pilih ${formData.jenis_asset}`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableAssets.map((asset) => (
+                    <SelectItem key={asset.id} value={asset.id}>
+                      {formData.jenis_asset === 'kendaraan' 
+                        ? `${(asset as any).nama_kendaraan} (${(asset as any).no_polisi})`
+                        : (asset as any).nama_ruangan
+                      }
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="nama_pemohon">Nama Pemohon</Label>
               <Input
-                id="tgl_mulai"
-                type="date"
-                value={formData.tgl_mulai}
-                onChange={(e) => setFormData({ ...formData, tgl_mulai: e.target.value })}
+                id="nama_pemohon"
+                value={formData.nama_pemohon}
+                onChange={(e) => setFormData({ ...formData, nama_pemohon: e.target.value })}
+                placeholder="Masukkan nama lengkap"
                 className="mt-2"
               />
             </div>
-            <div>
-              <Label htmlFor="jam_mulai">Jam Mulai</Label>
-              <Input
-                id="jam_mulai"
-                type="time"
-                value={formData.jam_mulai}
-                onChange={(e) => setFormData({ ...formData, jam_mulai: e.target.value })}
-                className="mt-2"
-              />
-            </div>
-            <div>
-              <Label htmlFor="tgl_selesai">Tanggal Selesai</Label>
-              <Input
-                id="tgl_selesai"
-                type="date"
-                value={formData.tgl_selesai}
-                onChange={(e) => setFormData({ ...formData, tgl_selesai: e.target.value })}
-                className="mt-2"
-              />
-            </div>
-            <div>
-              <Label htmlFor="jam_selesai">Jam Selesai</Label>
-              <Input
-                id="jam_selesai"
-                type="time"
-                value={formData.jam_selesai}
-                onChange={(e) => setFormData({ ...formData, jam_selesai: e.target.value })}
-                className="mt-2"
-              />
-            </div>
-          </div>
 
-          <div className="md:col-span-2">
-            <Label htmlFor="keperluan">Keperluan</Label>
-            <Textarea
-              id="keperluan"
-              value={formData.keperluan}
-              onChange={(e) => setFormData({ ...formData, keperluan: e.target.value })}
-              placeholder="Jelaskan keperluan peminjaman"
-              className="mt-2"
-              rows={3}
-            />
-          </div>
+            <div>
+              <Label htmlFor="nip">NIP</Label>
+              <Input
+                id="nip"
+                value={formData.nip}
+                onChange={(e) => {
+                  // Only allow numeric input
+                  const value = e.target.value.replace(/\D/g, '');
+                  setFormData({ ...formData, nip: value });
+                }}
+                placeholder="Contoh: 19821234567"
+                className="mt-2"
+                minLength={11}
+                maxLength={18}
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Minimal 11 digit, hanya angka {formData.nip.length > 0 && `(${formData.nip.length} digit)`}
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                🔒 Data NIP Anda dilindungi dan akan ditampilkan secara tersamarkan untuk privasi
+              </p>
+            </div>
 
-          {formData.jenis_asset === 'kendaraan' && (
-            <div className="md:col-span-2">
-              <Label>Apakah membutuhkan supir?</Label>
-              <div className="flex gap-3 mt-2">
-                <Button
-                  type="button"
-                  variant={formData.butuh_supir === 'ya' ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => setFormData({ ...formData, butuh_supir: 'ya' })}
-                >
-                  Iya
-                </Button>
-                <Button
-                  type="button"
-                  variant={formData.butuh_supir === 'tidak' ? 'default' : 'outline'}
-                  className="flex-1"
-                  onClick={() => setFormData({ ...formData, butuh_supir: 'tidak' })}
-                >
-                  Tidak
-                </Button>
+            <div>
+              <Label htmlFor="unit">Unit/Bidang</Label>
+              <Input
+                id="unit"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                placeholder="Masukkan unit/bidang"
+                className="mt-2"
+              />
+            </div>
+
+
+            <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="tgl_mulai">Tanggal Mulai</Label>
+                <Input
+                  id="tgl_mulai"
+                  type="date"
+                  value={formData.tgl_mulai}
+                  onChange={(e) => setFormData({ ...formData, tgl_mulai: e.target.value })}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="jam_mulai">Jam Mulai</Label>
+                <Input
+                  id="jam_mulai"
+                  type="time"
+                  value={formData.jam_mulai}
+                  onChange={(e) => setFormData({ ...formData, jam_mulai: e.target.value })}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="tgl_selesai">Tanggal Selesai</Label>
+                <Input
+                  id="tgl_selesai"
+                  type="date"
+                  value={formData.tgl_selesai}
+                  onChange={(e) => setFormData({ ...formData, tgl_selesai: e.target.value })}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="jam_selesai">Jam Selesai</Label>
+                <Input
+                  id="jam_selesai"
+                  type="time"
+                  value={formData.jam_selesai}
+                  onChange={(e) => setFormData({ ...formData, jam_selesai: e.target.value })}
+                  className="mt-2"
+                />
               </div>
             </div>
-          )}
-        </div>
 
-        <Button 
-          onClick={handleSubmit} 
-          className="w-full mt-6 h-12"
-          disabled={addPeminjaman.isPending}
-        >
-          {addPeminjaman.isPending ? 'Mengirim...' : 'Kirim Pengajuan'}
-        </Button>
-      </CardContent>
-    </Card>
+            <div className="md:col-span-2">
+              <Label htmlFor="keperluan">Keperluan</Label>
+              <Textarea
+                id="keperluan"
+                value={formData.keperluan}
+                onChange={(e) => setFormData({ ...formData, keperluan: e.target.value })}
+                placeholder="Jelaskan keperluan peminjaman"
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+
+            {formData.jenis_asset === 'kendaraan' && (
+              <div className="md:col-span-2">
+                <Label>Apakah membutuhkan supir?</Label>
+                <div className="flex gap-3 mt-2">
+                  <Button
+                    type="button"
+                    variant={formData.butuh_supir === 'ya' ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setFormData({ ...formData, butuh_supir: 'ya' })}
+                  >
+                    Iya
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={formData.butuh_supir === 'tidak' ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setFormData({ ...formData, butuh_supir: 'tidak' })}
+                  >
+                    Tidak
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button 
+            onClick={handleSubmit} 
+            className="w-full mt-6 h-12"
+            disabled={addPeminjaman.isPending}
+          >
+            {addPeminjaman.isPending ? 'Mengirim...' : 'Kirim Pengajuan'}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 };

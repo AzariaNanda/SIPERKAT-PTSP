@@ -47,8 +47,9 @@ export const usePeminjaman = (isAdmin: boolean = false) => {
   const { data: peminjamanList = [], isLoading, error, refetch } = useQuery({
     queryKey: ['peminjaman', isAdmin],
     queryFn: async () => {
+      // Use masked view for admin panel - NIP is already masked server-side for non-owners
       const { data, error } = await supabase
-        .from('data_peminjaman')
+        .from('data_peminjaman_masked')
         .select('*')
         .order('created_at', { ascending: false });
       
