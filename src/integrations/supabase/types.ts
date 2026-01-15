@@ -14,32 +14,13 @@ export type Database = {
   }
   public: {
     Tables: {
-      allowed_users: {
-        Row: {
-          created_at: string | null
-          email: string
-          role: Database["public"]["Enums"]["app_role"]
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          role?: Database["public"]["Enums"]["app_role"]
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          role?: Database["public"]["Enums"]["app_role"]
-        }
-        Relationships: []
-      }
       data_peminjaman: {
         Row: {
           asset_id: string
           butuh_supir: string | null
           catatan_admin: string | null
-          created_at: string | null
+          created_at: string
           email: string
-          file_surat_url: string | null
           id: string
           jam_mulai: string
           jam_selesai: string
@@ -47,21 +28,20 @@ export type Database = {
           keperluan: string
           nama_pemohon: string
           nip: string
-          status: Database["public"]["Enums"]["status_peminjaman"] | null
+          status: Database["public"]["Enums"]["status_peminjaman"]
           tgl_mulai: string
           tgl_selesai: string
-          timestamp: string | null
+          timestamp: string
           unit: string
-          updated_at: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
           asset_id: string
           butuh_supir?: string | null
           catatan_admin?: string | null
-          created_at?: string | null
+          created_at?: string
           email: string
-          file_surat_url?: string | null
           id?: string
           jam_mulai: string
           jam_selesai: string
@@ -69,21 +49,20 @@ export type Database = {
           keperluan: string
           nama_pemohon: string
           nip: string
-          status?: Database["public"]["Enums"]["status_peminjaman"] | null
+          status?: Database["public"]["Enums"]["status_peminjaman"]
           tgl_mulai: string
           tgl_selesai: string
-          timestamp?: string | null
+          timestamp?: string
           unit: string
-          updated_at?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
           asset_id?: string
           butuh_supir?: string | null
           catatan_admin?: string | null
-          created_at?: string | null
+          created_at?: string
           email?: string
-          file_surat_url?: string | null
           id?: string
           jam_mulai?: string
           jam_selesai?: string
@@ -91,121 +70,91 @@ export type Database = {
           keperluan?: string
           nama_pemohon?: string
           nip?: string
-          status?: Database["public"]["Enums"]["status_peminjaman"] | null
+          status?: Database["public"]["Enums"]["status_peminjaman"]
           tgl_mulai?: string
           tgl_selesai?: string
-          timestamp?: string | null
+          timestamp?: string
           unit?: string
-          updated_at?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
       }
       master_kendaraan: {
         Row: {
-          created_at: string | null
+          created_at: string
           foto_url: string | null
           id: string
           nama_kendaraan: string
           no_polisi: string
           penempatan: string
-          status: string | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           foto_url?: string | null
           id?: string
           nama_kendaraan: string
           no_polisi: string
           penempatan: string
-          status?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           foto_url?: string | null
           id?: string
           nama_kendaraan?: string
           no_polisi?: string
           penempatan?: string
-          status?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
       master_ruangan: {
         Row: {
-          created_at: string | null
+          created_at: string
           foto_url: string | null
           id: string
-          kapasitas: number | null
+          kapasitas: number
           lokasi: string
           nama_ruangan: string
-          status: string | null
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           foto_url?: string | null
           id?: string
-          kapasitas?: number | null
+          kapasitas?: number
           lokasi: string
           nama_ruangan: string
-          status?: string | null
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           foto_url?: string | null
           id?: string
-          kapasitas?: number | null
+          kapasitas?: number
           lokasi?: string
           nama_ruangan?: string
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      master_supir: {
-        Row: {
-          created_at: string | null
-          id: string
-          nama_supir: string
-          status: string | null
-          telepon: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          nama_supir: string
-          status?: string | null
-          telepon?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          nama_supir?: string
-          status?: string | null
-          telepon?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
       user_roles: {
         Row: {
-          created_at: string | null
+          created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
