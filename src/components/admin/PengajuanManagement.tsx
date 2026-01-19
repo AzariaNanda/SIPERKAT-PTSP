@@ -102,7 +102,9 @@ export const PengajuanManagement = () => {
                     <TableCell>
                       <div>
                         <div className="font-medium">{item.nama_pemohon}</div>
-                        <div className="text-xs text-muted-foreground">{item.nip}</div>
+                        <div className="text-xs text-muted-foreground font-mono tracking-wide">
+                          {item.nip || '-'}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>{item.unit}</TableCell>

@@ -12,15 +12,11 @@ interface AuthContextType {
   isAdmin: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Allowed emails
-const ADMIN_EMAIL = 'subbagumpeg.dpmptspbms@gmail.com';
-const USER_EMAIL = 'dpmpptspkabbanyumas@gmail.com';
-const ALLOWED_EMAILS = [ADMIN_EMAIL, USER_EMAIL];
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -28,27 +24,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<AppRole>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = async (userId: string): Promise<AppRole> => {
     try {
       const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
       if (error) {
         console.error('Error fetching role:', error);
-        return null;
+        // Default to 'user' if role not found
+        return 'user';
       }
-      return data as AppRole;
+      // If no role found, default to 'user'
+      return (data as AppRole) || 'user';
     } catch (err) {
       console.error('Error in fetchUserRole:', err);
-      return null;
+      return 'user';
     }
-  };
-
-  const checkAndSignOutUnauthorized = async (email: string | undefined) => {
-    if (!email || !ALLOWED_EMAILS.includes(email)) {
-      toast.error('Akses Ditolak. Email tidak terdaftar dalam sistem.');
-      await supabase.auth.signOut();
-      return true;
-    }
-    return false;
   };
 
   useEffect(() => {
@@ -60,11 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (session?.user) {
           setTimeout(async () => {
-            const unauthorized = await checkAndSignOutUnauthorized(session.user.email);
-            if (!unauthorized) {
-              const userRole = await fetchUserRole(session.user.id);
-              setRole(userRole);
-            }
+            const userRole = await fetchUserRole(session.user.id);
+            setRole(userRole);
             setLoading(false);
           }, 0);
         } else {
@@ -80,11 +66,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        const unauthorized = await checkAndSignOutUnauthorized(session.user.email);
-        if (!unauthorized) {
-          const userRole = await fetchUserRole(session.user.id);
-          setRole(userRole);
-        }
+        const userRole = await fetchUserRole(session.user.id);
+        setRole(userRole);
       }
       setLoading(false);
     });
@@ -93,12 +76,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
-    // Check if email is allowed
-    if (!ALLOWED_EMAILS.includes(email)) {
-      return { error: 'Akses Ditolak. Email tidak terdaftar dalam sistem.' };
-    }
-
-    // Try real authentication
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -114,14 +91,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error: null };
   };
 
+  const signUp = async (email: string, password: string, fullName: string): Promise<{ error: string | null }> => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: fullName,
+        }
+      }
+    });
+
+    if (error) {
+      if (error.message.includes('already registered')) {
+        return { error: 'Email sudah terdaftar. Silakan login.' };
+      }
+      return { error: error.message };
+    }
+
+    // The database trigger will automatically insert the user role
+    // No need to manually insert into user_roles
+
+    return { error: null };
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
     } catch (error) {
-      // Ignore signOut errors - session might already be invalid
       console.log('SignOut completed (session may have been expired)');
     }
-    // Always clear local state regardless of API response
     setUser(null);
     setSession(null);
     setRole(null);
@@ -135,6 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAdmin: role === 'admin',
     loading,
     signIn,
+    signUp,
     signOut,
   };
 
