@@ -1,10 +1,10 @@
-import { MessageCircle } from "lucide-react";
+import { MessageCircle } from 'lucide-react';
 
 // Ganti nomor di sini (gunakan kode negara tanpa tanda +)
-const WHATSAPP_NUMBER = "6287876974117";
+const WHATSAPP_NUMBER = '6285175394751';
 
 // Teks pesan otomatis yang akan muncul di chat
-const DEFAULT_MESSAGE = "Halo Admin, saya ingin bertanya mengenai layanan PTSP di SIPERKAT.";
+const DEFAULT_MESSAGE = 'Halo Admin, saya ingin bertanya mengenai layanan PTSP di SIPERKAT.';
 
 // Menggabungkan nomor dan pesan ke dalam URL API WhatsApp
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(DEFAULT_MESSAGE)}`;
