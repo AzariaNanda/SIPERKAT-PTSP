@@ -10,7 +10,7 @@ export type PeminjamanUpdate = TablesUpdate<'data_peminjaman'>;
 export type StatusPeminjaman = Enums<'status_peminjaman'>;
 export type JenisAsset = Enums<'jenis_asset'>;
 
-// Collision detection function
+// Collision detection function - checks both 'Disetujui' and 'Pending' statuses
 export const checkScheduleConflict = (
   newBooking: { 
     asset_id: string;
@@ -24,8 +24,8 @@ export const checkScheduleConflict = (
   existingBookings: Peminjaman[]
 ): Peminjaman[] => {
   return existingBookings.filter(booking => {
-    // Only check approved bookings
-    if (booking.status !== 'Disetujui') return false;
+    // Check both approved AND pending bookings for comprehensive conflict detection
+    if (booking.status !== 'Disetujui' && booking.status !== 'Pending') return false;
     // Same asset type and ID
     if (booking.asset_id !== newBooking.asset_id || booking.jenis_asset !== newBooking.jenis_asset) return false;
     // Exclude self when updating
