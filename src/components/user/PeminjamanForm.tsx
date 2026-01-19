@@ -196,7 +196,7 @@ export const PeminjamanForm = () => {
             </div>
 
             <div>
-              <Label htmlFor="nip">NIP</Label>
+              <Label htmlFor="nip">NIP (Nomor Induk Pegawai)</Label>
               <Input
                 id="nip"
                 value={formData.nip}
@@ -205,7 +205,7 @@ export const PeminjamanForm = () => {
                   const value = e.target.value.replace(/\D/g, '');
                   setFormData({ ...formData, nip: value });
                 }}
-                placeholder="Contoh: 19821234567"
+                placeholder="Masukkan 18 digit NIP Anda (contoh: 198201011234567890)"
                 className="mt-2"
                 minLength={11}
                 maxLength={18}
@@ -213,10 +213,10 @@ export const PeminjamanForm = () => {
                 pattern="[0-9]*"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Minimal 11 digit, hanya angka {formData.nip.length > 0 && `(${formData.nip.length} digit)`}
+                Format: 18 digit angka (minimal 11 digit) {formData.nip.length > 0 && `• Terisi: ${formData.nip.length} digit`}
               </p>
-              <p className="text-xs text-blue-600 mt-1">
-                🔒 Data NIP Anda dilindungi dan akan ditampilkan secara tersamarkan untuk privasi
+              <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                🔒 NIP Anda akan ditampilkan tersamar (misal: 1982********7890) untuk menjaga privasi
               </p>
             </div>
 

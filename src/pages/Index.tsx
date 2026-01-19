@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { LayoutDashboard, ClipboardList, Car, Home, Send, History, Download, Mail, Lock, LogIn } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { LayoutDashboard, ClipboardList, Car, Home, Send, History, Download, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,11 +18,6 @@ import { useAuth, AuthProvider } from '@/contexts/AuthContext';
 import { usePeminjaman } from '@/hooks/usePeminjaman';
 import { exportKendaraanData, exportRuanganData } from '@/utils/exportSeparated';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-
-const ADMIN_EMAIL = 'subbagumpeg.dpmptspbms@gmail.com';
-const USER_EMAIL = 'dpmpptspkabbanyumas@gmail.com';
-const ALLOWED_EMAILS = [ADMIN_EMAIL, USER_EMAIL];
 
 const LoginScreen = () => {
   const { signIn, loading } = useAuth();
@@ -34,11 +30,6 @@ const LoginScreen = () => {
     
     if (!email || !password) {
       toast.error('Mohon isi email dan password');
-      return;
-    }
-
-    if (!ALLOWED_EMAILS.includes(email)) {
-      toast.error('Email tidak terdaftar dalam sistem');
       return;
     }
 
@@ -56,42 +47,6 @@ const LoginScreen = () => {
       toast.success('Login berhasil!');
     }
 
-    setIsSubmitting(false);
-  };
-
-  const handleQuickSignUp = async (type: 'admin' | 'user') => {
-    const selectedEmail = type === 'admin' ? ADMIN_EMAIL : USER_EMAIL;
-    const selectedPassword = type === 'admin' ? 'admin123' : 'user123';
-    
-    setIsSubmitting(true);
-    
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
-      email: selectedEmail,
-      password: selectedPassword,
-      options: {
-        emailRedirectTo: redirectUrl
-      }
-    });
-
-    if (error) {
-      if (error.message.includes('already registered')) {
-        toast.info('Akun sudah ada. Mencoba login...');
-        const { error: loginError } = await signIn(selectedEmail, selectedPassword);
-        if (loginError) toast.error(loginError);
-        else toast.success(`Login sebagai ${type === 'admin' ? 'Admin' : 'User'} berhasil!`);
-      } else {
-        toast.error(error.message);
-      }
-    } else {
-      toast.success(`Akun ${type === 'admin' ? 'Admin' : 'User'} berhasil dibuat! Mencoba login...`);
-      // Auto login after signup
-      const { error: loginError } = await signIn(selectedEmail, selectedPassword);
-      if (!loginError) {
-        toast.success(`Login sebagai ${type === 'admin' ? 'Admin' : 'User'} berhasil!`);
-      }
-    }
-    
     setIsSubmitting(false);
   };
 
@@ -153,49 +108,20 @@ const LoginScreen = () => {
             </Button>
           </form>
           
-          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-sm text-amber-800 font-semibold mb-3 text-center">
-              Akses Terbatas: Hanya email terdaftar yang dapat mengakses sistem ini
-            </p>
-            <div className="space-y-2 text-sm text-amber-700">
-              <div className="flex items-start gap-2">
-                <span className="font-medium">• Admin:</span>
-                <span className="break-all">subbagumpeg.dpmptspbms@gmail.com</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="font-medium">• User:</span>
-                <span className="break-all">dpmpptspkabbanyumas@gmail.com</span>
-              </div>
-            </div>
+          <div className="mt-6 text-center">
+            <p className="text-muted-foreground mb-4">Belum punya akun?</p>
+            <Link to="/register">
+              <Button variant="outline" className="gap-2 w-full">
+                <UserPlus className="w-4 h-4" />
+                Daftar Sekarang
+              </Button>
+            </Link>
           </div>
 
-          {/* Quick Setup for Testing */}
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800 font-semibold mb-3 text-center">
-              🚀 Setup Cepat - Buat & Login Akun Demo
-            </p>
-            <div className="flex gap-2">
-              <Button 
-                type="button"
-                variant="outline" 
-                className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
-                onClick={() => handleQuickSignUp('admin')}
-                disabled={isSubmitting}
-              >
-                Setup Admin
-              </Button>
-              <Button 
-                type="button"
-                variant="outline" 
-                className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-100"
-                onClick={() => handleQuickSignUp('user')}
-                disabled={isSubmitting}
-              >
-                Setup User
-              </Button>
-            </div>
-            <p className="text-xs text-blue-600 mt-2 text-center">
-              Klik untuk membuat akun (jika belum ada) dan login otomatis
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800 text-center">
+              🔐 Semua pengguna baru akan otomatis mendapatkan akses sebagai User.
+              Hubungi admin untuk perubahan role.
             </p>
           </div>
         </CardContent>
