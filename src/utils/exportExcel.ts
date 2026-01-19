@@ -55,7 +55,7 @@ export const exportDetailedData = (peminjaman: Peminjaman[], year: number, month
     'Jam Selesai': p.jam_selesai,
     'Keperluan': p.keperluan,
     'Status': p.status,
-    'Memerlukan Supir': p.supir ? 'Ya' : 'Tidak',
+    'Memerlukan Supir': p.butuh_supir === 'ya' ? 'Ya' : p.butuh_supir === 'tidak' ? 'Tidak' : '-',
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);

@@ -29,7 +29,7 @@ export interface Peminjaman {
   tgl_selesai: string;
   jam_selesai: string;
   keperluan: string;
-  supir: boolean;
+  butuh_supir: string | null; // 'ya' | 'tidak' | null - sesuai dengan database
   status: 'Pending' | 'Disetujui' | 'Ditolak' | 'Konflik';
   catatan_admin: string;
 }
