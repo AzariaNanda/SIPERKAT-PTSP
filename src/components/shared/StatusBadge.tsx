@@ -9,6 +9,7 @@ export const StatusBadge = ({ status }: StatusBadgeProps) => {
   const getStatusConfig = (status: StatusPeminjaman) => {
     switch (status) {
       case 'Disetujui':
+        // Label diubah dari 'Disetujui' menjadi 'Sedang dipakai'
         return { className: 'bg-green-100 text-green-800 border-green-300', label: 'Disetujui' };
       case 'Pending':
         return { className: 'bg-yellow-100 text-yellow-800 border-yellow-300', label: 'Pending' };
