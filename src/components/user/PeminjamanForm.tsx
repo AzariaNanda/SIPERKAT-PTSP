@@ -213,10 +213,7 @@ export const PeminjamanForm = () => {
                 pattern="[0-9]*"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Format: 18 digit angka (minimal 11 digit) {formData.nip.length > 0 && `• Terisi: ${formData.nip.length} digit`}
-              </p>
-              <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
-                🔒 NIP Anda akan ditampilkan tersamar (misal: 1982********7890) untuk menjaga privasi
+                Format: 18 digit angka {formData.nip.length > 0 && `• Terisi: ${formData.nip.length} digit`}
               </p>
             </div>
 
