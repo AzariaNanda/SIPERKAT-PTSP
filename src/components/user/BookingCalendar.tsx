@@ -22,13 +22,13 @@ export const BookingCalendar = ({
 }: BookingCalendarProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  // Filter bookings for the selected asset with Disetujui or Pending status
+  // Filter bookings for the selected asset with Sedang Digunakan or Pending status
   const relevantBookings = useMemo(() => {
     return bookings.filter(
       (b) =>
         b.asset_id === selectedAssetId &&
         b.jenis_asset === jenisAsset &&
-        (b.status === 'Disetujui' || b.status === 'Pending')
+        (b.status === 'Sedang Digunakan' || b.status === 'Pending')
     );
   }, [bookings, selectedAssetId, jenisAsset]);
 
@@ -65,7 +65,7 @@ export const BookingCalendar = ({
     approved: bookedDates.filter((date) =>
       relevantBookings.some(
         (b) =>
-          b.status === 'Disetujui' &&
+          b.status === 'Sedang Digunakan' &&
           isWithinInterval(date, {
             start: parseISO(b.tgl_mulai),
             end: parseISO(b.tgl_selesai),
@@ -129,7 +129,7 @@ export const BookingCalendar = ({
         <div className="flex gap-3 mt-2 text-xs">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm bg-destructive/20" />
-            <span>Disetujui</span>
+            <span>Sedang Digunakan</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: 'hsl(48 96% 89%)' }} />
@@ -160,14 +160,14 @@ export const BookingCalendar = ({
                   <div
                     key={booking.id}
                     className={`p-3 rounded-lg text-sm ${
-                      booking.status === 'Disetujui'
+                      booking.status === 'Sedang Digunakan'
                         ? 'bg-destructive/10 border border-destructive/20'
                         : 'bg-yellow-50 border border-yellow-200'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-medium">{booking.jam_mulai} - {booking.jam_selesai}</span>
-                      <Badge variant={booking.status === 'Disetujui' ? 'destructive' : 'outline'}>
+                      <Badge variant={booking.status === 'Sedang Digunakan' ? 'destructive' : 'outline'}>
                         {booking.status}
                       </Badge>
                     </div>
