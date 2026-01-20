@@ -43,9 +43,9 @@ export const PeminjamanForm = () => {
       return;
     }
 
-    // 2. Validasi NIP (min 11 digit)
-    if (formData.nip.length < 11) {
-      toast.error('NIP MINIMAL 11 DIGIT');
+    // 2. Validasi NIP (min 18 digit)
+    if (formData.nip.length < 18) {
+      toast.error('NIP MINIMAL 18 DIGIT');
       return;
     }
 
@@ -189,7 +189,7 @@ export const PeminjamanForm = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="font-semibold uppercase text-xs text-slate-500">NIP</Label>
+              <Label className="font-semibold uppercase text-xs text-slate-500">NIP (NOMOR INDUK PEGAWAI)</Label>
               <Input
                 value={formData.nip}
                 maxLength={18}
