@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, AlertCircle } from 'lucide-react';
-import { format, isSameDay, parseISO, isWithinInterval } from 'date-fns';
+import { CalendarDays, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { format, parseISO, isWithinInterval, startOfDay } from 'date-fns';
 import { id } from 'date-fns/locale';
 import type { Peminjaman, JenisAsset } from '@/hooks/usePeminjaman';
 
@@ -15,187 +15,150 @@ interface BookingCalendarProps {
 }
 
 export const BookingCalendar = ({ 
-  bookings, 
+  bookings = [], 
   selectedAssetId, 
   jenisAsset,
   onDateSelect 
 }: BookingCalendarProps) => {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
-  // Filter bookings for the selected asset with Sedang Digunakan or Pending status
+  // 1. Sinkronisasi Data: Filter pengajuan yang aktif untuk aset terpilih
   const relevantBookings = useMemo(() => {
     return bookings.filter(
       (b) =>
         b.asset_id === selectedAssetId &&
         b.jenis_asset === jenisAsset &&
-        (b.status === 'Sedang Digunakan' || b.status === 'Pending')
+        ['Disetujui', 'Pending', 'Konflik'].includes(b.status)
     );
   }, [bookings, selectedAssetId, jenisAsset]);
 
-  // Get dates that have bookings
-  const bookedDates = useMemo(() => {
-    const dates: Date[] = [];
-    relevantBookings.forEach((booking) => {
-      const startDate = parseISO(booking.tgl_mulai);
-      const endDate = parseISO(booking.tgl_selesai);
+  // 2. Mapping Modifiers untuk warna kalender
+  const modifiers = useMemo(() => {
+    const approved: Date[] = [];
+    const pending: Date[] = [];
+    const conflict: Date[] = [];
+
+    relevantBookings.forEach((b) => {
+      const start = startOfDay(parseISO(b.tgl_mulai));
+      const end = startOfDay(parseISO(b.tgl_selesai));
       
-      // Add all dates in the range
-      let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        dates.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
+      let current = new Date(start);
+      while (current <= end) {
+        const dateCopy = new Date(current);
+        if (b.status === 'Disetujui') approved.push(dateCopy);
+        else if (b.status === 'Pending') pending.push(dateCopy);
+        else if (b.status === 'Konflik') conflict.push(dateCopy);
+        
+        current.setDate(current.getDate() + 1);
       }
     });
-    return dates;
+
+    return { approved, pending, conflict };
   }, [relevantBookings]);
 
-  // Get bookings for selected date
+  // 3. Styling Warna Kalender (Hijau = Sedang dipakai, Kuning = Menunggu)
+  const modifiersStyles = {
+    approved: { backgroundColor: '#e1c0a3', color: '#991b1b', fontWeight: 'bold', borderRadius: '8px' },
+    pending: { backgroundColor: '#fef9c3', color: '#854d0e', fontWeight: 'bold', borderRadius: '8px' },
+  };
+
+  // 4. Detail jadwal pada tanggal yang diklik
   const selectedDateBookings = useMemo(() => {
     if (!selectedDate) return [];
-    return relevantBookings.filter((booking) => {
-      const startDate = parseISO(booking.tgl_mulai);
-      const endDate = parseISO(booking.tgl_selesai);
-      return isWithinInterval(selectedDate, { start: startDate, end: endDate });
+    const d = startOfDay(selectedDate);
+    return relevantBookings.filter((b) => {
+      const start = startOfDay(parseISO(b.tgl_mulai));
+      const end = startOfDay(parseISO(b.tgl_selesai));
+      return d >= start && d <= end;
     });
   }, [selectedDate, relevantBookings]);
 
-  // Custom modifier for booked dates
-  const modifiers = useMemo(() => ({
-    booked: bookedDates,
-    approved: bookedDates.filter((date) =>
-      relevantBookings.some(
-        (b) =>
-          b.status === 'Sedang Digunakan' &&
-          isWithinInterval(date, {
-            start: parseISO(b.tgl_mulai),
-            end: parseISO(b.tgl_selesai),
-          })
-      )
-    ),
-    pending: bookedDates.filter((date) =>
-      relevantBookings.some(
-        (b) =>
-          b.status === 'Pending' &&
-          isWithinInterval(date, {
-            start: parseISO(b.tgl_mulai),
-            end: parseISO(b.tgl_selesai),
-          })
-      )
-    ),
-  }), [bookedDates, relevantBookings]);
-
-  const modifiersStyles = {
-    booked: {
-      backgroundColor: 'hsl(var(--destructive) / 0.1)',
-      borderRadius: '0',
-    },
-    approved: {
-      backgroundColor: 'hsl(var(--destructive) / 0.2)',
-      color: 'hsl(var(--destructive))',
-      fontWeight: 600,
-    },
-    pending: {
-      backgroundColor: 'hsl(48 96% 89%)',
-      color: 'hsl(45 93% 30%)',
-      fontWeight: 600,
-    },
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date);
-    if (date && onDateSelect) {
-      onDateSelect(date);
-    }
-  };
-
   if (!selectedAssetId) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="py-8 text-center text-muted-foreground">
-          <CalendarDays className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>Pilih aset terlebih dahulu untuk melihat jadwal</p>
+      <Card className="border-dashed bg-slate-50/50">
+        <CardContent className="py-12 text-center">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+            <CalendarDays className="w-8 h-8 text-slate-300" />
+          </div>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Pilih Aset Terlebih Dahulu</p>
+          <p className="text-xs text-slate-400 mt-1">Jadwal akan muncul setelah Anda memilih unit.</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <CalendarDays className="w-5 h-5" />
+    <Card className="shadow-xl border-none overflow-hidden bg-white">
+      <CardHeader className="bg-slate-50/80 border-b pb-4">
+        <CardTitle className="text-sm font-black uppercase tracking-tighter flex items-center gap-2 text-slate-700">
+          <CalendarDays className="w-4 h-4 text-primary" />
           Jadwal {jenisAsset === 'kendaraan' ? 'Kendaraan' : 'Ruangan'}
         </CardTitle>
-        <div className="flex gap-3 mt-2 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-destructive/20" />
-            <span>Sedang Digunakan</span>
+        {/* Legend/Keterangan Warna */}
+        <div className="flex flex-wrap gap-3 mt-3">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-slate-500">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-200 border border-red-400" /> Sedang dipakai
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: 'hsl(48 96% 89%)' }} />
-            <span>Pending</span>
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-slate-500">
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-200 border border-yellow-400" /> Menunggu
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      
+      <CardContent className="p-4">
         <Calendar
           mode="single"
           selected={selectedDate}
-          onSelect={handleDateSelect}
+          onSelect={(d) => { setSelectedDate(d); if (d && onDateSelect) onDateSelect(d); }}
           modifiers={modifiers}
           modifiersStyles={modifiersStyles}
           locale={id}
-          className="rounded-md border w-full"
+          className="rounded-xl border shadow-inner"
         />
 
-        {selectedDate && (
-          <div className="mt-4 border-t pt-4">
-            <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: id })}
-            </h4>
-            {selectedDateBookings.length > 0 ? (
-              <div className="space-y-2">
-                {selectedDateBookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className={`p-3 rounded-lg text-sm ${
-                      booking.status === 'Sedang Digunakan'
-                        ? 'bg-destructive/10 border border-destructive/20'
-                        : 'bg-yellow-50 border border-yellow-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium">{booking.jam_mulai} - {booking.jam_selesai}</span>
-                      <Badge variant={booking.status === 'Sedang Digunakan' ? 'destructive' : 'outline'}>
-                        {booking.status}
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground text-xs">
-                      {booking.nama_pemohon} • {booking.unit}
-                    </p>
-                    <p className="text-muted-foreground text-xs mt-1 truncate">
-                      {booking.keperluan}
-                    </p>
+        <div className="mt-6 space-y-3">
+          <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
+            <Clock className="w-3 h-3" />
+            {selectedDate ? format(selectedDate, 'EEEE, d MMMM yyyy', { locale: id }) : 'Pilih Tanggal'}
+          </h4>
+
+          {selectedDateBookings.length > 0 ? (
+            <div className="space-y-2">
+              {selectedDateBookings.map((b) => (
+                <div key={b.id} className={`p-3 rounded-xl border flex flex-col gap-1 transition-all ${
+                  b.status === 'Disetujui' ? 'bg-red-50 border-red-100' : 
+                  b.status === 'Konflik' ? 'bg-red-50 border-red-100' : 'bg-yellow-50 border-yellow-100'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-xs text-slate-700">{b.jam_mulai} - {b.jam_selesai}</span>
+                    <Badge className={`text-[9px] font-black uppercase px-2 h-5 border-none ${
+                      b.status === 'Disetujui' ? 'bg-red-600' : 
+                      b.status === 'Konflik' ? 'bg-red-600' : 'bg-yellow-500 text-white'
+                    }`}>
+                      {b.status === 'Disetujui' ? 'Sedang dipakai' : b.status}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <span className="text-green-600">✓</span> Tersedia pada tanggal ini
-              </p>
-            )}
-          </div>
-        )}
+                  <p className="text-[11px] font-bold text-slate-600 uppercase truncate">{b.nama_pemohon}</p>
+                  <p className="text-[10px] text-slate-400 italic leading-tight">"{b.keperluan}"</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
+              <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto mb-2" />
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Jadwal Kosong / Tersedia</p>
+            </div>
+          )}
+        </div>
 
         {relevantBookings.length > 0 && (
-          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-            <p className="text-xs text-muted-foreground flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>
-                Klik pada tanggal untuk melihat detail jadwal. Tarikh dengan warna merah/kuning sudah ditempah.
-              </span>
-            </p>
+          <div className="mt-6 p-3 bg-primary/5 rounded-xl border border-primary/10">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-primary mt-0.5" />
+              <p className="text-[9px] text-slate-500 leading-relaxed font-medium">
+                Klik pada tanggal berwarna untuk melihat detail pemakaian aset. Pastikan tidak mengajukan di jam yang sama dengan status <strong>Sedang dipakai</strong>.
+              </p>
+            </div>
           </div>
         )}
       </CardContent>
