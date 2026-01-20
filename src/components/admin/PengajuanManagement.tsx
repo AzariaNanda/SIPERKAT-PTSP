@@ -1,11 +1,17 @@
 import { useState, useMemo } from 'react';
-import { ClipboardList, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { 
+  ClipboardList, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, 
+  Clock, X, Check, MessageSquare, Pencil, LayoutDashboard, Car, Building2, Calendar
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { StatusButtons } from './StatusButtons';
-import { usePeminjaman, type Peminjaman, type StatusPeminjaman } from '@/hooks/usePeminjaman';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { StatusBadge } from '@/components/shared/StatusBadge';
+import { usePeminjaman, type StatusPeminjaman } from '@/hooks/usePeminjaman';
 import { useKendaraan } from '@/hooks/useKendaraan';
 import { useRuangan } from '@/hooks/useRuangan';
 import { toast } from 'sonner';
@@ -13,257 +19,217 @@ import { toast } from 'sonner';
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
 export const PengajuanManagement = () => {
-  const { peminjamanList, isLoading, updateStatus, checkScheduleConflict } = usePeminjaman(true);
-  const { kendaraanList } = useKendaraan();
-  const { ruanganList } = useRuangan();
+  const { peminjamanList = [], isLoading, updateStatus } = usePeminjaman(true);
+  const { kendaraanList = [] } = useKendaraan();
+  const { ruanganList = [] } = useRuangan();
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filterType, setFilterType] = useState('all');
+
+  const [isRejectOpen, setIsRejectOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
 
   const getAssetName = (jenis_asset: string, asset_id: string) => {
     if (jenis_asset === 'kendaraan') {
       const k = kendaraanList.find(x => x.id === asset_id);
-      return k ? `${k.nama_kendaraan} (${k.no_polisi})` : 'Unknown';
+      if (!k) return 'Aset dihapus';
+      const nama = k.merk_tipe || k.nama_kendaraan || 'Tanpa Nama';
+      const plat = k.plat_nomor || k.no_polisi || '-';
+      return `${nama} (${plat})`;
     } else {
       const r = ruanganList.find(x => x.id === asset_id);
-      return r ? r.nama_ruangan : 'Unknown';
+      return r ? (r.nama_ruangan || 'Tanpa Nama') : 'Aset dihapus';
     }
   };
 
-  const handleStatusChange = (id: string, status: StatusPeminjaman, catatan?: string) => {
-    updateStatus.mutate({ id, status, catatan_admin: catatan });
-  };
+  const handleAction = async (id: string, status: StatusPeminjaman, note?: string) => {
+    if (status === 'Disetujui') {
+      const item = peminjamanList.find(p => p.id === id);
+      if (item) {
+        const approvedConflict = peminjamanList.filter(b => 
+          b.id !== id && b.status === 'Disetujui' && b.asset_id === item.asset_id &&
+          b.tgl_mulai === item.tgl_mulai && (item.jam_mulai < b.jam_selesai && item.jam_selesai > b.jam_mulai)
+        );
 
-  const handleConflictCheck = (peminjaman: Peminjaman) => {
-    const conflicts = checkScheduleConflict({
-      asset_id: peminjaman.asset_id,
-      jenis_asset: peminjaman.jenis_asset,
-      tgl_mulai: peminjaman.tgl_mulai,
-      tgl_selesai: peminjaman.tgl_selesai,
-      jam_mulai: peminjaman.jam_mulai,
-      jam_selesai: peminjaman.jam_selesai,
-      id: peminjaman.id,
-    });
-
-    if (conflicts.length > 0) {
-      const conflictStatus = conflicts[0].status;
-      toast.error(
-        <div>
-          <p className="font-semibold">Konflik Jadwal Terdeteksi!</p>
-          <p className="text-sm mt-1">
-            Bentrok dengan peminjaman ({conflictStatus}) oleh {conflicts[0].nama_pemohon} pada {conflicts[0].tgl_mulai}
-          </p>
-        </div>
-      );
-      return true;
+        if (approvedConflict.length > 0) {
+          toast.error("TIDAK BISA ACC!", { 
+            description: `Jadwal ini sudah resmi dipakai oleh ${approvedConflict[0].nama_pemohon}.` 
+          });
+          return;
+        }
+      }
     }
-    return false;
+    
+    await updateStatus.mutateAsync({ id, status, catatan_admin: note });
+    setIsRejectOpen(false);
+    setReason('');
   };
 
-  const pendingCount = peminjamanList.filter(p => p.status === 'Pending' || p.status === 'Konflik').length;
+  const filteredData = useMemo(() => {
+    if (filterType === 'all') return peminjamanList;
+    return peminjamanList.filter(item => item.jenis_asset === filterType);
+  }, [peminjamanList, filterType]);
 
-  // Pagination calculations
-  const totalItems = peminjamanList.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const paginatedList = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return peminjamanList.slice(startIndex, endIndex);
-  }, [peminjamanList, currentPage, itemsPerPage]);
+    return filteredData.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredData, currentPage, itemsPerPage]);
 
-  // Reset to page 1 when items per page changes
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(Number(value));
-    setCurrentPage(1);
-  };
-
-  const goToPage = (page: number) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  };
-
-  if (isLoading) {
-    return <div className="flex justify-center p-8">Memuat data...</div>;
-  }
+  if (isLoading) return <div className="p-12 text-center font-black animate-pulse text-primary tracking-widest uppercase">Memperbarui Data...</div>;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5" />
+    <Card className="border-none shadow-2xl overflow-hidden bg-white">
+      <CardHeader className="bg-slate-50/80 border-b p-6">
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+          <CardTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tight text-slate-800">
+            <div className="p-2 bg-primary rounded-lg shadow-lg">
+              <ClipboardList className="w-5 h-5 text-white" />
+            </div>
             Manajemen Pengajuan
-          </span>
-          <div className="flex items-center gap-4">
-            {pendingCount > 0 && (
-              <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                {pendingCount} menunggu
-              </span>
-            )}
-            <span className="text-sm text-muted-foreground font-normal">
-              Total: {totalItems} data
-            </span>
-          </div>
-        </CardTitle>
+          </CardTitle>
+          <Tabs value={filterType} onValueChange={(v) => { setFilterType(v); setCurrentPage(1); }} className="w-full lg:w-auto">
+            <TabsList className="grid grid-cols-3 h-11 rounded-xl bg-slate-200/50 p-1 border border-slate-200">
+              <TabsTrigger value="all" className="font-black text-[10px] uppercase tracking-widest">SEMUA</TabsTrigger>
+              <TabsTrigger value="kendaraan" className="font-black text-[10px] uppercase tracking-widest text-primary">MOBIL</TabsTrigger>
+              <TabsTrigger value="ruangan" className="font-black text-[10px] uppercase tracking-widest text-primary">RUANGAN</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </CardHeader>
-      <CardContent>
-        {peminjamanList.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Belum ada pengajuan peminjaman
+
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader className="bg-slate-50/50">
+            <TableRow className="hover:bg-transparent border-none">
+              <TableHead className="w-[60px] text-center font-black text-slate-400 text-[10px] uppercase tracking-widest">No</TableHead>
+              {/* KOLOM BARU: TANGGAL PENGAJUAN */}
+              <TableHead className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Tgl Pengajuan</TableHead>
+              <TableHead className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Pemohon</TableHead>
+              <TableHead className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Aset & Jadwal</TableHead>
+              <TableHead className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Keperluan</TableHead>
+              <TableHead className="text-center font-black text-slate-400 text-[10px] uppercase tracking-widest">Aksi</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedList.map((item, index) => (
+              <TableRow key={item.id} className={`${item.status === 'Konflik' ? 'bg-red-50/30' : ''} border-slate-50 hover:bg-slate-50/50 transition-all`}>
+                <TableCell className="text-center font-mono text-xs text-slate-300">
+                  {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
+                </TableCell>
+                {/* DATA TANGGAL PENGAJUAN */}
+                <TableCell>
+                  <div className="flex items-center gap-2 text-[11px] font-black text-slate-600 uppercase tracking-tight">
+                    <Calendar className="w-3 h-3 text-primary" />
+                    {new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </div>
+                </TableCell>
+                <TableCell className="py-4">
+                  <div className="text-[12px] font-black text-slate-black text-primary uppercase mb-1 tracking-tight">{item.nama_pemohon}</div>
+                  <div className="text-[10px] text-slate-400 font-black text-primary uppercase tracking-widest mt-0.5">{item.unit} • NIP: {item.nip || '-'}</div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-[10px] font-black text-primary uppercase mb-1 tracking-widest">
+                    {getAssetName(item.jenis_asset, item.asset_id)}
+                  </div>
+                  <div className="text-[10px] flex items-center gap-1.5 text-slate-500 font-bold uppercase">
+                    <Clock className="w-3 h-3 text-slate-300"/> {item.tgl_mulai} | {item.jam_mulai} - {item.jam_selesai}
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-[200px]">
+                  <p className="text-[11px] text-slate-600 font-medium italic line-clamp-2 leading-relaxed">"{item.keperluan || '-'}"</p>
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    {item.status === 'Pending' || item.status === 'Konflik' ? (
+                      <div className="flex gap-1.5 bg-white p-1.5 rounded-xl border shadow-sm">
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8 text-[9px] font-black px-4 uppercase tracking-widest" onClick={() => handleAction(item.id, 'Disetujui')}>
+                          SETUJU
+                        </Button>
+                        <Button size="sm" variant="destructive" className="h-8 text-[9px] font-black px-4 uppercase tracking-widest" onClick={() => { setSelectedId(item.id); setIsRejectOpen(true); }}>
+                          TOLAK
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <StatusBadge status={item.status} />
+                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-slate-200 text-slate-400 hover:text-primary transition-all" onClick={() => handleAction(item.id, 'Pending')}>
+                          <Pencil className="w-3.5 h-3.5"/>
+                        </Button>
+                      </div>
+                    )}
+                    {item.catatan_admin && (
+                      <div className="w-full max-w-[200px] p-2 bg-blue-50/50 rounded-lg border border-blue-100 flex items-start gap-2 shadow-sm">
+                        <MessageSquare className="w-3 h-3 text-blue-400 mt-1 shrink-0" />
+                        <p className="text-[9px] text-blue-800 leading-tight italic font-medium">
+                          <span className="font-black uppercase text-[8px] not-italic mr-1 text-blue-900 tracking-tighter">CATATAN:</span> {item.catatan_admin}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-slate-50/50 border-t gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tampilkan:</span>
+            <Select value={String(itemsPerPage)} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[85px] h-9 font-black text-xs border-2 border-slate-200 bg-white rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="font-black">
+                {ITEMS_PER_PAGE_OPTIONS.map(opt => <SelectItem key={opt} value={String(opt)}>{opt}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">No</TableHead>
-                    <TableHead>Tanggal</TableHead>
-                    <TableHead>Pemohon</TableHead>
-                    <TableHead>Unit</TableHead>
-                    <TableHead>Aset</TableHead>
-                    <TableHead>Jadwal</TableHead>
-                    <TableHead>Keperluan</TableHead>
-                    <TableHead>Supir</TableHead>
-                    <TableHead className="min-w-[200px]">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedList.map((item, index) => (
-                    <TableRow key={item.id} className={item.status === 'Konflik' ? 'bg-orange-50' : ''}>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {(currentPage - 1) * itemsPerPage + index + 1}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {new Date(item.created_at).toLocaleDateString('id-ID')}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{item.nama_pemohon}</div>
-                          <div className="text-xs text-muted-foreground font-mono tracking-wide">
-                            {item.nip || '-'}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium capitalize">{item.jenis_asset}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {getAssetName(item.jenis_asset, item.asset_id)}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <div className="text-sm">
-                          <div>{item.tgl_mulai}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {item.jam_mulai} - {item.jam_selesai}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate" title={item.keperluan}>
-                        {item.keperluan}
-                      </TableCell>
-                      <TableCell>
-                        {item.jenis_asset === 'kendaraan' ? (
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            item.butuh_supir === 'ya' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {item.butuh_supir === 'ya' ? 'Butuh' : 'Tidak'}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <StatusButtons
-                          peminjaman={item}
-                          onStatusChange={handleStatusChange}
-                          onConflictDetected={() => handleConflictCheck(item)}
-                          isUpdating={updateStatus.isPending}
-                        />
-                        {item.catatan_admin && (
-                          <div className="mt-2 text-xs text-muted-foreground bg-muted p-2 rounded">
-                            <span className="font-medium">Catatan:</span> {item.catatan_admin}
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
 
-            {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Tampilkan</span>
-                <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
-                  <SelectTrigger className="w-[80px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ITEMS_PER_PAGE_OPTIONS.map(option => (
-                      <SelectItem key={option} value={String(option)}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">per halaman</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  Halaman {currentPage} dari {totalPages}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => goToPage(1)}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => goToPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronsRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+          <div className="flex items-center gap-5">
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Hal {currentPage} / {totalPages}</span>
+            <div className="flex gap-2 bg-white p-1 rounded-xl border-2 border-slate-200 shadow-sm">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}><ChevronsLeft className="h-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages || totalPages === 0}><ChevronRight className="h-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0}><ChevronsRight className="h-4 h-4" /></Button>
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </CardContent>
+
+      <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-black uppercase text-slate-800 tracking-tighter text-xl">
+              ALASAN PENOLAKAN
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea 
+              placeholder="Berikan alasan kenapa ditolak..." 
+              value={reason} 
+              onChange={(e) => setReason(e.target.value)} 
+              className="min-h-[120px] bg-slate-50 border-2 border-slate-200 text-sm font-black focus:ring-primary rounded-xl placeholder:font-normal" 
+            />
+          </div>
+          <DialogFooter className="flex items-center justify-end gap-4">
+            <Button variant="ghost" onClick={() => setIsRejectOpen(false)} className="font-black text-xs uppercase tracking-tighter text-slate-500">
+              BATAL
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => selectedId && handleAction(selectedId, 'Ditolak', reason)} 
+              disabled={!reason} 
+              className="font-black text-xs uppercase tracking-tighter shadow-xl shadow-red-200 h-11 px-8 rounded-xl"
+            >
+              KONFIRMASI TOLAK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
