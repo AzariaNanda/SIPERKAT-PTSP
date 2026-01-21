@@ -20,7 +20,6 @@ import { RiwayatPeminjaman } from '@/components/user/RiwayatPeminjaman';
 import { useAuth, AuthProvider } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-// ... (Daftar ALLOWED_EMAILS dan features tetap sama)
 const ALLOWED_EMAILS = [
   "subbagumpeg.dpmptspbms@gmail.com",
   "dpmpptspkabbanyumas@gmail.com",
@@ -57,6 +56,7 @@ const LoginScreen = () => {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 overflow-hidden bg-white font-sans text-slate-900">
+      {/* SISI KIRI */}
       <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#1e3a8a] p-16 text-white relative">
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-16">
@@ -69,7 +69,7 @@ const LoginScreen = () => {
             </div>
           </div>
           <div className="mb-8">
-            <h2 className="text-[48px] font-bold leading-[1.15] tracking-tight mb-3">Sistem Peminjaman <br /> Kendaraan & Ruang <br /> Rapat Terpadu</h2>
+            <h2 className="text-[48px] font-bold leading-[1.15] tracking-tight mb-3 uppercase">Sistem Peminjaman <br /> Kendaraan & Ruang <br /> Rapat Terpadu</h2>
             <p className="text-lg text-white/60 leading-relaxed max-w-md font-normal">Platform digital untuk mengelola peminjaman aset kantor dengan efisien.</p>
           </div>
           <div className="grid grid-cols-2 gap-5 mt-12">
@@ -85,31 +85,55 @@ const LoginScreen = () => {
         <div className="relative z-10 text-[10px] font-black uppercase tracking-[0.25em] text-white/20 text-left">© 2026 DPMPTSP Kabupaten Banyumas</div>
       </div>
 
+      {/* SISI KANAN */}
       <div className="flex items-center justify-center p-8 bg-slate-50/50">
         <div className="w-full max-w-md">
-          <Card className="shadow-2xl border-none">
+          <Card className="shadow-2xl border-none bg-white">
             <CardContent className="pt-10 pb-10 px-10">
               <div className="text-center mb-10">
                 <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-5">
                   <Car className="w-10 h-10 text-primary" />
                 </div>
-                <h1 className="text-3xl font-bold text-primary mb-1 tracking-tight">SIPERKAT</h1>
+                <h1 className="text-3xl font-bold text-primary mb-1 tracking-tight uppercase">SIPERKAT</h1>
                 <p className="text-slate-600 font-semibold text-sm uppercase tracking-wide">Sistem Peminjaman Terpadu</p>
               </div>
+              
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label className="font-bold text-xs uppercase text-slate-500 tracking-wider">Email Pegawai</Label>
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 bg-slate-50" />
+                  <div className="relative mt-1">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm" />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="font-bold text-xs uppercase text-slate-500 tracking-wider">Password</Label>
-                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 bg-slate-50" />
+                  <div className="relative mt-1">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm" />
+                  </div>
                 </div>
-                <Button type="submit" disabled={isSubmitting} className="w-full h-12 text-base font-bold shadow-lg mt-4">{isSubmitting ? "Memproses..." : "Masuk Sistem"}</Button>
+
+                <div className="pt-2">
+                  <Button type="submit" disabled={loading || isSubmitting} className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all uppercase">
+                    {isSubmitting ? "Memproses..." : <><LogIn className="w-5 h-5 mr-2" />Masuk Sistem</>}
+                  </Button>
+                  
+                  {/* REVISI: Lupa password di bawah tombol, posisi tengah, warna pudar */}
+                  <div className="flex justify-center mt-4">
+                    <Link to="/forgot-password" title="Klik untuk mereset kata sandi" className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-primary transition-all">
+                      Lupa password?
+                    </Link>
+                  </div>
+                </div>
               </form>
+              
               <div className="mt-10 text-center pt-8 border-t border-slate-100">
+                <p className="text-slate-400 text-xs mb-3 font-medium tracking-wide uppercase">Belum memiliki akses?</p>
                 <Link to="/register">
-                  <Button variant="outline" className="w-full h-11 font-bold text-xs"><UserPlus className="w-4 h-4 mr-2" /> Daftar Sekarang</Button>
+                  <Button variant="outline" className="w-full h-11 font-bold border-slate-200 hover:bg-slate-50 text-slate-700 text-xs uppercase">
+                    <UserPlus className="w-4 h-4 mr-2" /> Daftar Sekarang
+                  </Button>
                 </Link>
               </div>
             </CardContent>
@@ -123,8 +147,7 @@ const LoginScreen = () => {
 const MainApp = () => {
   const { isAdmin, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Memuat...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-primary animate-pulse tracking-widest uppercase">SIPERKAT</div>;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -140,7 +163,6 @@ const MainApp = () => {
                 <TabsTrigger value="kendaraan" className="gap-2 font-black text-xs uppercase"><Car className="w-4 h-4" />Kendaraan</TabsTrigger>
                 <TabsTrigger value="ruangan" className="gap-2 font-black text-xs uppercase"><Home className="w-4 h-4" />Ruangan</TabsTrigger>
               </TabsList>
-              {/* TOMBOL EXPORT GLOBAL TELAH DIHAPUS DARI SINI */}
             </div>
             <TabsContent value="dashboard"><Dashboard isAdmin={true} /></TabsContent>
             <TabsContent value="pengajuan"><PengajuanManagement /></TabsContent>
@@ -150,9 +172,9 @@ const MainApp = () => {
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
-              <TabsTrigger value="dashboard" className="gap-2"><LayoutDashboard className="w-4 h-4" />Dashboard</TabsTrigger>
-              <TabsTrigger value="ajukan" className="gap-2"><Send className="w-4 h-4" />Ajukan</TabsTrigger>
-              <TabsTrigger value="riwayat" className="gap-2"><History className="w-4 h-4" />Riwayat</TabsTrigger>
+              <TabsTrigger value="dashboard" className="gap-2 font-black text-xs uppercase"><LayoutDashboard className="w-4 h-4" />Dashboard</TabsTrigger>
+              <TabsTrigger value="ajukan" className="gap-2 font-black text-xs uppercase"><Send className="w-4 h-4" />Ajukan</TabsTrigger>
+              <TabsTrigger value="riwayat" className="gap-2 font-black text-xs uppercase"><History className="w-4 h-4" />Riwayat</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard"><Dashboard isAdmin={false} /></TabsContent>
             <TabsContent value="ajukan"><PeminjamanForm /></TabsContent>

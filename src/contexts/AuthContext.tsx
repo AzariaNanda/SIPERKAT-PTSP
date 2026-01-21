@@ -14,6 +14,9 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  // Fitur Baru: Pemulihan Password
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,44 +30,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserRole = async (userId: string): Promise<AppRole> => {
     try {
       const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
-      if (error) {
-        console.error('Error fetching role:', error);
-        // Default to 'user' if role not found
-        return 'user';
-      }
-      // If no role found, default to 'user'
+      if (error) return 'user';
       return (data as AppRole) || 'user';
     } catch (err) {
-      console.error('Error in fetchUserRole:', err);
       return 'user';
     }
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-
         if (session?.user) {
-          setTimeout(async () => {
-            const userRole = await fetchUserRole(session.user.id);
-            setRole(userRole);
-            setLoading(false);
-          }, 0);
+          const userRole = await fetchUserRole(session.user.id);
+          setRole(userRole);
         } else {
           setRole(null);
-          setLoading(false);
         }
+        setLoading(false);
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
       if (session?.user) {
         const userRole = await fetchUserRole(session.user.id);
         setRole(userRole);
@@ -76,82 +66,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      if (error.message === 'Invalid login credentials') {
-        return { error: 'Email atau password salah' };
-      }
-      return { error: error.message };
+      return { error: error.message === 'Invalid login credentials' ? 'Email atau password salah' : error.message };
     }
-
     return { error: null };
   };
 
   const signUp = async (email: string, password: string, fullName: string): Promise<{ error: string | null }> => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        }
+      options: { 
+        emailRedirectTo: `${window.location.origin}/`,
+        data: { full_name: fullName } 
       }
     });
+    return { error: error ? error.message : null };
+  };
 
-    if (error) {
-      if (error.message.includes('already registered')) {
-        return { error: 'Email sudah terdaftar. Silakan login.' };
-      }
-      return { error: error.message };
-    }
+  // IMPLEMENTASI FITUR BARU
+  const resetPassword = async (email: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return { error: error ? error.message : null };
+  };
 
-    // The database trigger will automatically insert the user role
-    // No need to manually insert into user_roles
-
-    return { error: null };
+  const updatePassword = async (newPassword: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error: error ? error.message : null };
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.log('SignOut completed (session may have been expired)');
-    }
+    await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setRole(null);
-    toast.success('Logout berhasil');
+    toast.success('LOGOUT BERHASIL');
   };
 
   const value: AuthContextType = {
-    user,
-    session,
-    role,
-    isAdmin: role === 'admin',
-    loading,
-    signIn,
-    signUp,
-    signOut,
+    user, session, role, isAdmin: role === 'admin', loading,
+    signIn, signUp, signOut, resetPassword, updatePassword,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
