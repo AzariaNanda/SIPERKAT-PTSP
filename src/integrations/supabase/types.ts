@@ -177,6 +177,7 @@ export type Database = {
           jam_mulai: string | null
           jam_selesai: string | null
           jenis_asset: Database["public"]["Enums"]["jenis_asset"] | null
+          jumlah_peserta: number | null
           keperluan: string | null
           nama_pemohon: string | null
           nip: string | null
@@ -198,6 +199,7 @@ export type Database = {
           jam_mulai?: string | null
           jam_selesai?: string | null
           jenis_asset?: Database["public"]["Enums"]["jenis_asset"] | null
+          jumlah_peserta?: number | null
           keperluan?: string | null
           nama_pemohon?: string | null
           nip?: never
@@ -219,6 +221,7 @@ export type Database = {
           jam_mulai?: string | null
           jam_selesai?: string | null
           jenis_asset?: Database["public"]["Enums"]["jenis_asset"] | null
+          jumlah_peserta?: number | null
           keperluan?: string | null
           nama_pemohon?: string | null
           nip?: never
@@ -245,6 +248,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      mask_nip: { Args: { nip_text: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
