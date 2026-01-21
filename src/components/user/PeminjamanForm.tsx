@@ -49,10 +49,19 @@ export const PeminjamanForm = () => {
       return;
     }
 
-    // 3. Validasi Khusus Ruangan (Jumlah Peserta)
-    if (formData.jenis_asset === 'ruangan' && !formData.jumlah_peserta) {
-      toast.error('MOHON ISI JUMLAH PESERTA RAPAT');
-      return;
+    // 3. Validasi Khusus Ruangan (Jumlah Peserta & Kapasitas)
+    if (formData.jenis_asset === 'ruangan') {
+      if (!formData.jumlah_peserta) {
+        toast.error('MOHON ISI JUMLAH PESERTA RAPAT');
+        return;
+      }
+      
+      // Validasi Kapasitas Ruangan
+      const selectedRuangan = ruanganList.find((r: any) => r.id === formData.asset_id);
+      if (selectedRuangan && parseInt(formData.jumlah_peserta) > selectedRuangan.kapasitas) {
+        toast.error(`KAPASITAS RUANGAN TIDAK MENCUKUPI (Maksimal: ${selectedRuangan.kapasitas} orang)`);
+        return;
+      }
     }
 
     // 4. Validasi Khusus Kendaraan (Supir)
