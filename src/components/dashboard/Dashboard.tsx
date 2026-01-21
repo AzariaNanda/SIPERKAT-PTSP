@@ -8,6 +8,8 @@ import { MonthlyTable } from './MonthlyTable';
 import { useStats } from '@/hooks/useStats';
 import { exportAllDataSeparated } from '@/utils/exportSeparated';
 import { usePeminjaman } from '@/hooks/usePeminjaman';
+import { useKendaraan } from '@/hooks/useKendaraan';
+import { useRuangan } from '@/hooks/useRuangan';
 
 interface DashboardProps {
   isAdmin: boolean;
@@ -20,6 +22,8 @@ export const Dashboard = ({ isAdmin }: DashboardProps) => {
   
   const { monthlyStats, yearlyTotals, pendingCount, approvedCount, isLoading } = useStats(selectedYear);
   const { peminjamanList } = usePeminjaman(isAdmin);
+  const { kendaraanList } = useKendaraan();
+  const { ruanganList } = useRuangan();
 
   if (isLoading) {
     return <div className="flex justify-center p-8">Memuat data...</div>;
@@ -45,7 +49,7 @@ export const Dashboard = ({ isAdmin }: DashboardProps) => {
           </Select>
           
           {isAdmin && (
-            <Button onClick={() => exportAllDataSeparated(peminjamanList, selectedYear)} className="gap-2">
+            <Button onClick={() => exportAllDataSeparated(peminjamanList, selectedYear, kendaraanList, ruanganList)} className="gap-2">
               <Download className="w-4 h-4" />Export Semua
             </Button>
           )}

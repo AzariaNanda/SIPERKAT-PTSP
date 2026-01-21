@@ -25,6 +25,7 @@ export type Database = {
           jam_mulai: string
           jam_selesai: string
           jenis_asset: Database["public"]["Enums"]["jenis_asset"]
+          jumlah_peserta: number | null
           keperluan: string
           nama_pemohon: string
           nip: string
@@ -46,6 +47,7 @@ export type Database = {
           jam_mulai: string
           jam_selesai: string
           jenis_asset: Database["public"]["Enums"]["jenis_asset"]
+          jumlah_peserta?: number | null
           keperluan: string
           nama_pemohon: string
           nip: string
@@ -67,6 +69,7 @@ export type Database = {
           jam_mulai?: string
           jam_selesai?: string
           jenis_asset?: Database["public"]["Enums"]["jenis_asset"]
+          jumlah_peserta?: number | null
           keperluan?: string
           nama_pemohon?: string
           nip?: string

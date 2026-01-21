@@ -128,7 +128,7 @@ const RegisterScreen = () => {
             
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="password" name="password" className="text-xs font-bold uppercase text-slate-500">Password</Label>
+                <Label htmlFor="password" className="text-xs font-bold uppercase text-slate-500">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
@@ -143,7 +143,7 @@ const RegisterScreen = () => {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword" name="confirmPassword" className="text-xs font-bold uppercase text-slate-500">Ulangi</Label>
+                <Label htmlFor="confirmPassword" className="text-xs font-bold uppercase text-slate-500">Ulangi</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input

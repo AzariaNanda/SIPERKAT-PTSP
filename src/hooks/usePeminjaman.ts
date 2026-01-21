@@ -14,13 +14,18 @@ export const usePeminjaman = (isAdmin: boolean = false) => {
   const queryClient = useQueryClient();
 
   const { data: peminjamanList = [], isLoading, refetch } = useQuery({
-    queryKey: ['peminjaman'],
+    queryKey: ['peminjaman', isAdmin],
     queryFn: async () => {
       // Admin melihat data lengkap, User melihat data melalui view masked untuk keamanan
-      const table = isAdmin ? 'data_peminjaman' : 'data_peminjaman_masked';
-      const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as Peminjaman[];
+      if (isAdmin) {
+        const { data, error } = await supabase.from('data_peminjaman').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        return data as Peminjaman[];
+      } else {
+        const { data, error } = await supabase.from('data_peminjaman_masked').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        return data as Peminjaman[];
+      }
     },
   });
 
