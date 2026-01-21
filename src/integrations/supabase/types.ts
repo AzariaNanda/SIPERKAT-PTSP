@@ -194,20 +194,20 @@ export type Database = {
           butuh_supir?: string | null
           catatan_admin?: string | null
           created_at?: string | null
-          email?: string | null
+          email?: never
           id?: string | null
           jam_mulai?: string | null
           jam_selesai?: string | null
           jenis_asset?: Database["public"]["Enums"]["jenis_asset"] | null
           jumlah_peserta?: number | null
           keperluan?: string | null
-          nama_pemohon?: string | null
+          nama_pemohon?: never
           nip?: never
           status?: Database["public"]["Enums"]["status_peminjaman"] | null
           tgl_mulai?: string | null
           tgl_selesai?: string | null
           timestamp?: string | null
-          unit?: string | null
+          unit?: never
           updated_at?: string | null
           user_id?: string | null
         }
@@ -216,20 +216,20 @@ export type Database = {
           butuh_supir?: string | null
           catatan_admin?: string | null
           created_at?: string | null
-          email?: string | null
+          email?: never
           id?: string | null
           jam_mulai?: string | null
           jam_selesai?: string | null
           jenis_asset?: Database["public"]["Enums"]["jenis_asset"] | null
           jumlah_peserta?: number | null
           keperluan?: string | null
-          nama_pemohon?: string | null
+          nama_pemohon?: never
           nip?: never
           status?: Database["public"]["Enums"]["status_peminjaman"] | null
           tgl_mulai?: string | null
           tgl_selesai?: string | null
           timestamp?: string | null
-          unit?: string | null
+          unit?: never
           updated_at?: string | null
           user_id?: string | null
         }
