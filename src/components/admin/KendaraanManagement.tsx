@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Car, Upload, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Car, Upload, Search, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useKendaraan, type Kendaraan, type KendaraanInsert } from '@/hooks/useKendaraan';
 import { supabase } from '@/integrations/supabase/client';
+import { exportMasterKendaraan } from '@/utils/exportMaster';
 import { toast } from 'sonner';
 
 export const KendaraanManagement = () => {
@@ -30,6 +31,15 @@ export const KendaraanManagement = () => {
     k.nama_kendaraan.toLowerCase().includes(searchTerm.toLowerCase()) ||
     k.no_polisi.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleExport = () => {
+    if (kendaraanList.length === 0) {
+      toast.error('DATA KENDARAAN KOSONG, TIDAK DAPAT EKSPOR');
+      return;
+    }
+    exportMasterKendaraan(kendaraanList);
+    toast.success('MASTER DATA KENDARAAN BERHASIL DIEKSPOR');
+  };
 
   const openAddModal = () => {
     setModalMode('add');
@@ -135,6 +145,14 @@ export const KendaraanManagement = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            {/* Tombol Export Kendaraan */}
+            <Button 
+              variant="outline" 
+              onClick={handleExport}
+              className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl border-2 hover:bg-slate-100 transition-all shadow-sm"
+            >
+              <FileDown className="w-4 h-4 mr-2" /> Export
+            </Button>
             <Button onClick={openAddModal} className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl shadow-lg shadow-primary/20">
               <Plus className="w-4 h-4 mr-2" /> Tambah Unit
             </Button>

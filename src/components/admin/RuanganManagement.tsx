@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Building2, Upload, Search, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, Upload, Search, Users, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useRuangan, type Ruangan, type RuanganInsert } from '@/hooks/useRuangan';
 import { supabase } from '@/integrations/supabase/client';
+import { exportMasterRuangan } from '@/utils/exportMaster';
 import { toast } from 'sonner';
 
 export const RuanganManagement = () => {
@@ -30,6 +31,15 @@ export const RuanganManagement = () => {
     r.nama_ruangan.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.lokasi.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleExport = () => {
+    if (ruanganList.length === 0) {
+      toast.error('DATA RUANGAN KOSONG, TIDAK DAPAT EKSPOR');
+      return;
+    }
+    exportMasterRuangan(ruanganList);
+    toast.success('MASTER DATA RUANGAN BERHASIL DIEKSPOR');
+  };
 
   const openAddModal = () => {
     setModalMode('add');
@@ -116,7 +126,6 @@ export const RuanganManagement = () => {
 
   return (
     <Card className="border-none shadow-2xl overflow-hidden bg-white">
-      {/* Header disamakan dengan gaya Manajemen Pengajuan & Kendaraan */}
       <CardHeader className="bg-slate-50/80 border-b p-6">
         <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
           <CardTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tighter text-slate-800">
@@ -136,6 +145,14 @@ export const RuanganManagement = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            {/* Tombol Export Ruangan */}
+            <Button 
+              variant="outline" 
+              onClick={handleExport}
+              className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl border-2 hover:bg-slate-100 transition-all shadow-sm"
+            >
+              <FileDown className="w-4 h-4 mr-2" /> Export
+            </Button>
             <Button onClick={openAddModal} className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl shadow-lg shadow-primary/20">
               <Plus className="w-4 h-4 mr-2" /> Tambah Ruang
             </Button>

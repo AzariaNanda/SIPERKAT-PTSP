@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { 
   ClipboardList, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, 
-  Clock, X, Check, MessageSquare, Pencil, LayoutDashboard, Car, Building2, Calendar
+  Clock, X, Check, MessageSquare, Pencil, Calendar, FileDown 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,6 +14,8 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { usePeminjaman, type StatusPeminjaman } from '@/hooks/usePeminjaman';
 import { useKendaraan } from '@/hooks/useKendaraan';
 import { useRuangan } from '@/hooks/useRuangan';
+// Pastikan file utility exportSeparated.ts Anda sudah menerima parameter kendaraanList & ruanganList
+import { exportKendaraanData, exportRuanganData, exportAllDataSeparated } from '@/utils/exportSeparated';
 import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
@@ -30,13 +32,16 @@ export const PengajuanManagement = () => {
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  
+  const currentYear = new Date().getFullYear();
 
+  // Fungsi helper untuk mendapatkan nama aset agar tampilan tabel rapi
   const getAssetName = (jenis_asset: string, asset_id: string) => {
     if (jenis_asset === 'kendaraan') {
       const k = kendaraanList.find(x => x.id === asset_id);
       if (!k) return 'Aset dihapus';
-      const nama = k.merk_tipe || k.nama_kendaraan || 'Tanpa Nama';
-      const plat = k.plat_nomor || k.no_polisi || '-';
+      const nama = k.nama_kendaraan || 'Tanpa Nama';
+      const plat = k.no_polisi || '-';
       return `${nama} (${plat})`;
     } else {
       const r = ruanganList.find(x => x.id === asset_id);
@@ -78,7 +83,11 @@ export const PengajuanManagement = () => {
     return filteredData.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredData, currentPage, itemsPerPage]);
 
-  if (isLoading) return <div className="p-12 text-center font-black animate-pulse text-primary tracking-widest uppercase">Memperbarui Data...</div>;
+  if (isLoading) return (
+    <div className="p-12 text-center font-black animate-pulse text-primary tracking-widest uppercase text-[10px]">
+      Memperbarui Database Pengajuan...
+    </div>
+  );
 
   return (
     <Card className="border-none shadow-2xl overflow-hidden bg-white">
@@ -90,13 +99,61 @@ export const PengajuanManagement = () => {
             </div>
             Manajemen Pengajuan
           </CardTitle>
-          <Tabs value={filterType} onValueChange={(v) => { setFilterType(v); setCurrentPage(1); }} className="w-full lg:w-auto">
-            <TabsList className="grid grid-cols-3 h-11 rounded-xl bg-slate-200/50 p-1 border border-slate-200">
-              <TabsTrigger value="all" className="font-black text-[10px] uppercase tracking-widest">SEMUA</TabsTrigger>
-              <TabsTrigger value="kendaraan" className="font-black text-[10px] uppercase tracking-widest text-primary">MOBIL</TabsTrigger>
-              <TabsTrigger value="ruangan" className="font-black text-[10px] uppercase tracking-widest text-primary">RUANGAN</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          
+          <div className="flex flex-wrap items-center justify-center gap-3 w-full lg:w-auto">
+            <Tabs value={filterType} onValueChange={(v) => { setFilterType(v); setCurrentPage(1); }} className="w-full lg:w-auto">
+              <TabsList className="grid grid-cols-3 h-11 rounded-xl bg-slate-200/50 p-1 border border-slate-200">
+                <TabsTrigger value="all" className="font-black text-[10px] uppercase tracking-widest">SEMUA</TabsTrigger>
+                <TabsTrigger value="kendaraan" className="font-black text-[10px] uppercase tracking-widest text-primary">KENDARAAN</TabsTrigger>
+                <TabsTrigger value="ruangan" className="font-black text-[10px] uppercase tracking-widest text-primary">RUANGAN</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* TOMBOL EXPORT DINAMIS BERDASARKAN FILTER AKTIF */}
+            {filterType === 'all' && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  if (peminjamanList.length === 0) return toast.error("DATA KOSONG");
+                  exportAllDataSeparated(peminjamanList, currentYear, kendaraanList, ruanganList);
+                  toast.success("EKSPOR SEMUA DATA (2 SHEET) BERHASIL");
+                }}
+                className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl border-2 hover:bg-slate-100 transition-all shadow-sm"
+              >
+                <FileDown className="w-4 h-4 mr-2" /> Export Semua
+              </Button>
+            )}
+
+            {filterType === 'kendaraan' && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  const data = peminjamanList.filter(p => p.jenis_asset === 'kendaraan');
+                  if (data.length === 0) return toast.error("DATA KENDARAAN KOSONG");
+                  exportKendaraanData(peminjamanList, currentYear, kendaraanList);
+                  toast.success("EKSPOR DATA KENDARAAN BERHASIL");
+                }}
+                className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl border-2 hover:bg-slate-100 transition-all shadow-sm"
+              >
+                <FileDown className="w-4 h-4 mr-2" /> Export Kendaraan
+              </Button>
+            )}
+
+            {filterType === 'ruangan' && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  const data = peminjamanList.filter(p => p.jenis_asset === 'ruangan');
+                  if (data.length === 0) return toast.error("DATA RUANGAN KOSONG");
+                  exportRuanganData(peminjamanList, currentYear, ruanganList);
+                  toast.success("EKSPOR DATA RUANGAN BERHASIL");
+                }}
+                className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl border-2 hover:bg-slate-100 transition-all shadow-sm"
+              >
+                <FileDown className="w-4 h-4 mr-2" /> Export Ruangan
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
 
@@ -105,7 +162,6 @@ export const PengajuanManagement = () => {
           <TableHeader className="bg-slate-50/50">
             <TableRow className="hover:bg-transparent border-none">
               <TableHead className="w-[60px] text-center font-black text-slate-400 text-[10px] uppercase tracking-widest">No</TableHead>
-              {/* KOLOM BARU: TANGGAL PENGAJUAN */}
               <TableHead className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Tgl Pengajuan</TableHead>
               <TableHead className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Pemohon</TableHead>
               <TableHead className="font-black text-slate-400 text-[10px] uppercase tracking-widest">Aset & Jadwal</TableHead>
@@ -119,7 +175,6 @@ export const PengajuanManagement = () => {
                 <TableCell className="text-center font-mono text-xs text-slate-300">
                   {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
                 </TableCell>
-                {/* DATA TANGGAL PENGAJUAN */}
                 <TableCell>
                   <div className="flex items-center gap-2 text-[11px] font-black text-slate-600 uppercase tracking-tight">
                     <Calendar className="w-3 h-3 text-primary" />
@@ -127,7 +182,7 @@ export const PengajuanManagement = () => {
                   </div>
                 </TableCell>
                 <TableCell className="py-4">
-                  <div className="text-[12px] font-black text-slate-black text-primary uppercase mb-1 tracking-tight">{item.nama_pemohon}</div>
+                  <div className="text-[12px] font-black text-primary uppercase mb-1 tracking-tight">{item.nama_pemohon}</div>
                   <div className="text-[10px] text-slate-400 font-black text-primary uppercase tracking-widest mt-0.5">{item.unit} • NIP: {item.nip || '-'}</div>
                 </TableCell>
                 <TableCell>
@@ -172,6 +227,13 @@ export const PengajuanManagement = () => {
                 </TableCell>
               </TableRow>
             ))}
+            {paginatedList.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-12 font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">
+                  Data Tidak Ditemukan
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
 
