@@ -37,19 +37,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // 1. Inisialisasi Session Awal
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
-        
         if (session?.user) {
           const userRole = await fetchUserRole(session.user.id);
           setRole(userRole);
         }
-      } catch (error) {
-        console.error("Auth init error:", error);
       } finally {
         setLoading(false);
       }
@@ -57,33 +53,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initAuth();
 
-    // 2. Listener Perubahan Status Auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
 
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         if (session?.user) {
-          // Ambil role secara asinkron tanpa mem-block setLoading
-          fetchUserRole(session.user.id).then((userRole) => {
-            setRole(userRole);
-          });
+          fetchUserRole(session.user.id).then(setRole);
         }
       } else if (event === 'SIGNED_OUT') {
         setRole(null);
       }
 
-      /**
-       * PERBAIKAN UTAMA: 
-       * Jangan biarkan loading tetap true saat proses pemulihan password.
-       * Ini mencegah aplikasi hang saat user berada di halaman Reset Password.
-       */
-      if (event === 'PASSWORD_RECOVERY') {
-        setLoading(false);
-      }
-      
-      // Pastikan loading dimatikan jika session sudah diproses
-      if (event === 'SIGNED_OUT' || !session) {
+      // Mematikan loading pada event krusial agar UI tidak freeze
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'SIGNED_OUT' || !session) {
         setLoading(false);
       }
     });
@@ -91,68 +74,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+  const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      return { error: error.message === 'Invalid login credentials' ? 'Email atau password salah' : error.message };
+      const msg = error.message === 'Invalid login credentials' ? 'Email atau password salah' : error.message;
+      return { error: msg };
     }
     return { error: null };
   };
 
-  const signUp = async (email: string, password: string, fullName: string): Promise<{ error: string | null }> => {
+  const signUp = async (email: string, password: string, fullName: string) => {
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { 
-        emailRedirectTo: `${window.location.origin}/`,
-        data: { full_name: fullName } 
-      }
+      email, password, options: { emailRedirectTo: `${window.location.origin}/`, data: { full_name: fullName } }
     });
     return { error: error ? error.message : null };
   };
 
-  const resetPassword = async (email: string): Promise<{ error: string | null }> => {
+  const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     return { error: error ? error.message : null };
   };
 
-  const updatePassword = async (newPassword: string): Promise<{ error: string | null }> => {
-    // Gunakan fungsi updateUser dari Supabase Auth
+  const updatePassword = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    
-    if (error) return { error: error.message };
-    
-    // Opsional: Sign out setelah ganti password agar user login ulang dengan kredensial baru
-    // atau biarkan session tetap aktif.
-    return { error: null };
+    return { error: error ? error.message : null };
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
-      setRole(null);
-      toast.success('LOGOUT BERHASIL');
-    } catch (error) {
-      console.error("Signout error:", error);
-    }
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setRole(null);
+    toast.success('LOGOUT BERHASIL');
   };
 
-  const value: AuthContextType = {
-    user,
-    session,
-    role,
-    isAdmin: role === 'admin',
-    loading,
-    signIn,
-    signUp,
-    signOut,
-    resetPassword,
-    updatePassword,
-  };
+  const value = { user, session, role, isAdmin: role === 'admin', loading, signIn, signUp, signOut, resetPassword, updatePassword };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

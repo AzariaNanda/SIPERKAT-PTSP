@@ -17,7 +17,7 @@ import { RuanganManagement } from '@/components/admin/RuanganManagement';
 import { PengajuanManagement } from '@/components/admin/PengajuanManagement';
 import { PeminjamanForm } from '@/components/user/PeminjamanForm';
 import { RiwayatPeminjaman } from '@/components/user/RiwayatPeminjaman';
-import { useAuth, AuthProvider } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const ALLOWED_EMAILS = [
@@ -56,7 +56,7 @@ const LoginScreen = () => {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 overflow-hidden bg-white font-sans text-slate-900">
-      {/* SISI KIRI */}
+      {/* SISI KIRI: BRANDING & FEATURES */}
       <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-[#020617] via-[#0f172a] to-[#1e3a8a] p-16 text-white relative">
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-16">
@@ -85,7 +85,7 @@ const LoginScreen = () => {
         <div className="relative z-10 text-[10px] font-black uppercase tracking-[0.25em] text-white/20 text-left">© 2026 DPMPTSP Kabupaten Banyumas</div>
       </div>
 
-      {/* SISI KANAN */}
+      {/* SISI KANAN: FORM LOGIN */}
       <div className="flex items-center justify-center p-8 bg-slate-50/50">
         <div className="w-full max-w-md">
           <Card className="shadow-2xl border-none bg-white">
@@ -100,28 +100,49 @@ const LoginScreen = () => {
               
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="font-bold text-xs uppercase text-slate-500 tracking-wider">Email Pegawai</Label>
+                  <Label htmlFor="email" className="font-bold text-xs uppercase text-slate-500 tracking-wider">Email Pegawai</Label>
                   <div className="relative mt-1">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input type="email" placeholder="nama@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm" />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="nama@email.com" 
+                      value={email} 
+                      onChange={(e) => setEmail(e.target.value)} 
+                      className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm" 
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-bold text-xs uppercase text-slate-500 tracking-wider">Password</Label>
+                  <Label htmlFor="password" className="font-bold text-xs uppercase text-slate-500 tracking-wider">Password</Label>
                   <div className="relative mt-1">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm" />
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      value={password} 
+                      onChange={(e) => setPassword(e.target.value)} 
+                      className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm" 
+                    />
                   </div>
                 </div>
 
                 <div className="pt-2">
-                  <Button type="submit" disabled={loading || isSubmitting} className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all uppercase">
+                  <Button 
+                    type="submit" 
+                    disabled={loading || isSubmitting} 
+                    className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all uppercase"
+                  >
                     {isSubmitting ? "Memproses..." : <><LogIn className="w-5 h-5 mr-2" />Masuk Sistem</>}
                   </Button>
                   
-                  {/* REVISI: Lupa password di bawah tombol, posisi tengah, warna pudar */}
+                  {/* LINK LUPA PASSWORD: DI BAWAH TOMBOL, TENGAH, PUDAR */}
                   <div className="flex justify-center mt-4">
-                    <Link to="/forgot-password" title="Klik untuk mereset kata sandi" className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-primary transition-all">
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-primary transition-all underline-offset-4 hover:underline"
+                    >
                       Lupa password?
                     </Link>
                   </div>
@@ -147,6 +168,7 @@ const LoginScreen = () => {
 const MainApp = () => {
   const { isAdmin, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-primary animate-pulse tracking-widest uppercase">SIPERKAT</div>;
 
   return (
@@ -192,10 +214,4 @@ const Index = () => {
   return user ? <MainApp /> : <LoginScreen />;
 };
 
-const IndexWrapper = () => (
-  <AuthProvider>
-    <Index />
-  </AuthProvider>
-);
-
-export default IndexWrapper;
+export default Index;
