@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   LayoutDashboard, ClipboardList, Car, Home, Send, History, 
-  Mail, Lock, LogIn, UserPlus, DoorOpen, CheckCircle2, Shield, Building2 
+  Mail, Lock, LogIn, UserPlus, DoorOpen, CheckCircle2, Shield, Building2,
+  Users 
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -15,15 +16,11 @@ import { Dashboard } from '@/components/dashboard/Dashboard';
 import { KendaraanManagement } from '@/components/admin/KendaraanManagement';
 import { RuanganManagement } from '@/components/admin/RuanganManagement';
 import { PengajuanManagement } from '@/components/admin/PengajuanManagement';
+import { PegawaiManagement } from '@/components/admin/PegawaiManagement';
 import { PeminjamanForm } from '@/components/user/PeminjamanForm';
 import { RiwayatPeminjaman } from '@/components/user/RiwayatPeminjaman';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-
-const ALLOWED_EMAILS = [
-  "subbagumpeg.dpmptspbms@gmail.com",
-  "dpmpptspkabbanyumas@gmail.com",
-];
 
 const features = [
   { icon: Car, title: "Peminjaman Kendaraan", description: "Booking kendaraan dinas dengan mudah" },
@@ -44,13 +41,16 @@ const LoginScreen = () => {
       toast.error('Mohon isi email dan password');
       return;
     }
-    if (!ALLOWED_EMAILS.includes(email)) {
-      toast.error('Akses Ditolak', { description: 'Email Anda tidak terdaftar.' });
-      return;
-    }
+
     setIsSubmitting(true);
+    // Logika login sekarang langsung bergantung pada hasil signIn Supabase
+    // Jika email tidak ada di whitelist, Supabase akan menolak pendaftaran akun sejak awal.
     const { error } = await signIn(email, password);
-    if (error) toast.error(error);
+    if (error) {
+      toast.error("LOGIN GAGAL", { description: error });
+    } else {
+      toast.success("SELAMAT DATANG", { description: "Berhasil masuk ke sistem SIPERKAT." });
+    }
     setIsSubmitting(false);
   };
 
@@ -137,7 +137,6 @@ const LoginScreen = () => {
                     {isSubmitting ? "Memproses..." : <><LogIn className="w-5 h-5 mr-2" />Masuk Sistem</>}
                   </Button>
                   
-                  {/* LINK LUPA PASSWORD: DI BAWAH TOMBOL, TENGAH, PUDAR */}
                   <div className="flex justify-center mt-4">
                     <Link 
                       to="/forgot-password" 
@@ -166,10 +165,13 @@ const LoginScreen = () => {
 };
 
 const MainApp = () => {
-  const { isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-primary animate-pulse tracking-widest uppercase">SIPERKAT</div>;
+
+  // Cek apakah user yang login adalah Admin Utama (Otoritas Tunggal)
+  const isMainAdmin = user?.email === 'subbagumpeg.dpmptspbms@gmail.com';
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -184,12 +186,22 @@ const MainApp = () => {
                 <TabsTrigger value="pengajuan" className="gap-2 font-black text-xs uppercase"><ClipboardList className="w-4 h-4" />Pengajuan</TabsTrigger>
                 <TabsTrigger value="kendaraan" className="gap-2 font-black text-xs uppercase"><Car className="w-4 h-4" />Kendaraan</TabsTrigger>
                 <TabsTrigger value="ruangan" className="gap-2 font-black text-xs uppercase"><Home className="w-4 h-4" />Ruangan</TabsTrigger>
+                {/* TAB PEGAWAI: Hanya tampil untuk Admin Utama */}
+                {isMainAdmin && (
+                  <TabsTrigger value="pegawai" className="gap-2 font-black text-xs uppercase text-primary">
+                    <Users className="w-4 h-4" /> Pegawai
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
             <TabsContent value="dashboard"><Dashboard isAdmin={true} /></TabsContent>
             <TabsContent value="pengajuan"><PengajuanManagement /></TabsContent>
             <TabsContent value="kendaraan"><KendaraanManagement /></TabsContent>
             <TabsContent value="ruangan"><RuanganManagement /></TabsContent>
+            {/* KONTEN PEGAWAI: Hanya aktif untuk Admin Utama */}
+            {isMainAdmin && (
+              <TabsContent value="pegawai"><PegawaiManagement /></TabsContent>
+            )}
           </Tabs>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
