@@ -11,27 +11,43 @@ import { toast } from 'sonner';
 const ForgotPassword = () => {
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return toast.error("MOHON INPUT EMAIL ANDA");
-
-    setLoading(true); // Langsung set loading agar user tahu proses berjalan
-    const { error } = await resetPassword(email);
     
-    if (error) {
-      toast.error("GAGAL MENGIRIM LINK", { description: error });
-    } else {
-      toast.success("LINK TERKIRIM!", { 
-        description: "Segera periksa email Anda (cek juga folder Spam)." 
-      });
+    // 1. Validasi Input
+    if (!email) {
+      return toast.error("MOHON MASUKKAN EMAIL PEGAWAI");
     }
-    setLoading(false);
+
+    // Mulai proses
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await resetPassword(email);
+      
+      if (error) {
+        toast.error("GAGAL MENGIRIM LINK", { 
+          description: error 
+        });
+      } else {
+        toast.success("LINK TERKIRIM!", { 
+          description: "Segera periksa email Anda (cek juga folder Spam)." 
+        });
+        // Kosongkan form setelah berhasil agar tidak membingungkan
+        setEmail('');
+      }
+    } catch (err) {
+      toast.error("Terjadi kesalahan sistem yang tidak terduga");
+    } finally {
+      // Selalu matikan loading di akhir baik sukses maupun gagal
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-slate-50/50 flex items-center justify-center p-6 font-sans text-slate-900">
       <div className="w-full max-w-md">
         <Card className="shadow-2xl border-none bg-white rounded-3xl overflow-hidden">
           <CardContent className="pt-12 pb-10 px-10">
@@ -41,7 +57,7 @@ const ForgotPassword = () => {
               </div>
               <h1 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Lupa Password?</h1>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2 leading-relaxed">
-                Kirim instruksi pemulihan ke email Anda
+                Kami akan mengirimkan link pemulihan <br/> ke email terdaftar Anda.
               </p>
             </div>
 
@@ -54,21 +70,32 @@ const ForgotPassword = () => {
                     type="email"
                     placeholder="nama@email.com"
                     value={email}
+                    disabled={isSubmitting}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="pl-12 h-14 bg-slate-50 border-slate-200 rounded-2xl focus:bg-white transition-all text-sm font-medium"
+                    className="pl-12 h-14 bg-slate-50 border-slate-200 rounded-2xl focus:bg-white transition-all text-sm font-medium disabled:opacity-50"
                   />
                 </div>
               </div>
 
               <Button 
                 type="submit" 
-                disabled={loading}
+                disabled={isSubmitting}
                 className="w-full h-14 font-black uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-[0.98] transition-all rounded-2xl"
               >
-                {loading ? "MENGIRIM..." : <><Send className="w-4 h-4 mr-2" /> Kirim Link Reset</>}
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    MENGIRIM...
+                  </span>
+                ) : (
+                  <><Send className="w-4 h-4 mr-2" /> Kirim Link Reset</>
+                )}
               </Button>
 
-              <Link to="/" className="flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 hover:text-primary transition-colors uppercase tracking-widest mt-4">
+              <Link 
+                to="/" 
+                className={`flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 hover:text-primary transition-colors uppercase tracking-widest mt-4 ${isSubmitting ? 'pointer-events-none opacity-50' : ''}`}
+              >
                 <ArrowLeft className="w-3 h-3" /> Kembali ke Login
               </Link>
             </form>

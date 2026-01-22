@@ -13,23 +13,53 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) return toast.error("PASSWORD MINIMAL 6 KARAKTER");
-    if (password !== confirmPassword) return toast.error("KONFIRMASI PASSWORD TIDAK COCOK");
-
-    setLoading(true);
-    const { error } = await updatePassword(password);
     
-    if (error) {
-      toast.error("GAGAL RESET PASSWORD", { description: error });
-    } else {
-      toast.success("BERHASIL!", { description: "Password diperbarui. Silakan login." });
-      navigate('/');
+    // 1. Validasi Input Dasar
+    if (!password || !confirmPassword) {
+      return toast.error("MOHON ISI SEMUA FIELD");
     }
-    setLoading(false);
+    
+    if (password.length < 6) {
+      return toast.error("PASSWORD MINIMAL 6 KARAKTER");
+    }
+    
+    if (password !== confirmPassword) {
+      return toast.error("KONFIRMASI PASSWORD TIDAK COCOK");
+    }
+
+    // Mulai proses submisi
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await updatePassword(password);
+      
+      if (error) {
+        toast.error("GAGAL RESET PASSWORD", { 
+          description: error 
+        });
+        setIsSubmitting(false); // Hanya matikan loading jika gagal agar tombol tidak aktif lagi saat sukses
+      } else {
+        toast.success("BERHASIL!", { 
+          description: "Password diperbarui. Mengalihkan ke login..." 
+        });
+        
+        /**
+         * PERBAIKAN: Jeda Navigasi
+         * Memberikan waktu 1.5 detik agar listener onAuthStateChange di AuthContext 
+         * selesai memproses sesi baru di latar belakang tanpa mem-block UI.
+         */
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 1500);
+      }
+    } catch (err) {
+      toast.error("Terjadi kesalahan sistem yang tidak terduga");
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,8 +84,9 @@ const ResetPassword = () => {
                     type="password"
                     placeholder="••••••••"
                     value={password}
+                    disabled={isSubmitting}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-12 h-14 bg-slate-50 border-slate-200 rounded-2xl focus:bg-white transition-all font-medium"
+                    className="pl-12 h-14 bg-slate-50 border-slate-200 rounded-2xl focus:bg-white transition-all font-medium disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -68,18 +99,26 @@ const ResetPassword = () => {
                     type="password"
                     placeholder="••••••••"
                     value={confirmPassword}
+                    disabled={isSubmitting}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-12 h-14 bg-slate-50 border-slate-200 rounded-2xl focus:bg-white transition-all font-medium"
+                    className="pl-12 h-14 bg-slate-50 border-slate-200 rounded-2xl focus:bg-white transition-all font-medium disabled:opacity-50"
                   />
                 </div>
               </div>
 
               <Button 
                 type="submit" 
-                disabled={loading}
+                disabled={isSubmitting}
                 className="w-full h-14 font-black uppercase tracking-widest shadow-xl active:scale-[0.98] transition-all rounded-2xl mt-4"
               >
-                {loading ? "MEMPROSES..." : "UPDATE PASSWORD"}
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    MEMPROSES...
+                  </span>
+                ) : (
+                  "UPDATE PASSWORD"
+                )}
               </Button>
             </form>
           </CardContent>

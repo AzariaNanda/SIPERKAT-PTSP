@@ -14,7 +14,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
-  // Fitur Baru: Pemulihan Password
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
 }
@@ -38,28 +37,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    // 1. Inisialisasi Session Awal
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
+        
         if (session?.user) {
           const userRole = await fetchUserRole(session.user.id);
           setRole(userRole);
-        } else {
-          setRole(null);
         }
+      } catch (error) {
+        console.error("Auth init error:", error);
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    initAuth();
+
+    // 2. Listener Perubahan Status Auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        const userRole = await fetchUserRole(session.user.id);
-        setRole(userRole);
+
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        if (session?.user) {
+          // Ambil role secara asinkron tanpa mem-block setLoading
+          fetchUserRole(session.user.id).then((userRole) => {
+            setRole(userRole);
+          });
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setRole(null);
       }
-      setLoading(false);
+
+      /**
+       * PERBAIKAN UTAMA: 
+       * Jangan biarkan loading tetap true saat proses pemulihan password.
+       * Ini mencegah aplikasi hang saat user berada di halaman Reset Password.
+       */
+      if (event === 'PASSWORD_RECOVERY') {
+        setLoading(false);
+      }
+      
+      // Pastikan loading dimatikan jika session sudah diproses
+      if (event === 'SIGNED_OUT' || !session) {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -85,7 +111,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error: error ? error.message : null };
   };
 
-  // IMPLEMENTASI FITUR BARU
   const resetPassword = async (email: string): Promise<{ error: string | null }> => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -94,21 +119,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updatePassword = async (newPassword: string): Promise<{ error: string | null }> => {
+    // Gunakan fungsi updateUser dari Supabase Auth
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    return { error: error ? error.message : null };
+    
+    if (error) return { error: error.message };
+    
+    // Opsional: Sign out setelah ganti password agar user login ulang dengan kredensial baru
+    // atau biarkan session tetap aktif.
+    return { error: null };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setRole(null);
-    toast.success('LOGOUT BERHASIL');
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setRole(null);
+      toast.success('LOGOUT BERHASIL');
+    } catch (error) {
+      console.error("Signout error:", error);
+    }
   };
 
   const value: AuthContextType = {
-    user, session, role, isAdmin: role === 'admin', loading,
-    signIn, signUp, signOut, resetPassword, updatePassword,
+    user,
+    session,
+    role,
+    isAdmin: role === 'admin',
+    loading,
+    signIn,
+    signUp,
+    signOut,
+    resetPassword,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
