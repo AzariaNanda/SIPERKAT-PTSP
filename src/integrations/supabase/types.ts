@@ -276,9 +276,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_email_registered: { Args: { _email: string }; Returns: boolean }
       mask_nip: { Args: { nip_text: string }; Returns: string }
       process_new_user_whitelist: {
         Args: { _email: string; _user_id: string }
+        Returns: undefined
+      }
+      sync_role_by_email: {
+        Args: { _email: string; _new_role: string }
         Returns: undefined
       }
     }

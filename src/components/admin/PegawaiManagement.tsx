@@ -41,9 +41,10 @@ export const PegawaiManagement = () => {
   // Helper untuk cek apakah email sudah punya akun di sistem Auth Supabase
   const checkEmailRegistered = async (email: string) => {
     // Kita gunakan RPC agar aman dan tidak perlu akses langsung ke tabel auth yang dibatasi
-    const { data: isRegistered } = await supabase.rpc('is_email_registered', { 
-      _email: email.toLowerCase().trim() 
-    });
+    // NOTE: types RPC di client dapat belum ter-update; cast agar build tidak gagal.
+    const { data: isRegistered } = await supabase.rpc('is_email_registered' as any, {
+      _email: email.toLowerCase().trim(),
+    } as any);
     return !!isRegistered;
   };
 
@@ -109,7 +110,8 @@ export const PegawaiManagement = () => {
       await supabase.from('pegawai_whitelist').update({ role: newRole }).eq('email', email);
       
       // 2. SINKRONISASI ROLE: Panggil RPC untuk update hak akses sistem secara instan
-      await supabase.rpc('sync_role_by_email', { _email: email, _new_role: newRole });
+      // NOTE: types RPC di client dapat belum ter-update; cast agar build tidak gagal.
+      await supabase.rpc('sync_role_by_email' as any, { _email: email, _new_role: newRole } as any);
       
       toast.success(`Role ${email} diubah menjadi ${newRole.toUpperCase()}`);
       fetchWhitelist();
