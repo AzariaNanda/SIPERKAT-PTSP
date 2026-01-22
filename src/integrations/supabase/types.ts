@@ -143,6 +143,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pegawai_whitelist: {
+        Row: {
+          created_at: string
+          email: string
+          is_registered: boolean
+          nama_pegawai: string | null
+          role: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          is_registered?: boolean
+          nama_pegawai?: string | null
+          role?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          is_registered?: boolean
+          nama_pegawai?: string | null
+          role?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -237,6 +264,7 @@ export type Database = {
       }
     }
     Functions: {
+      check_whitelist_email: { Args: { _email: string }; Returns: boolean }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -249,6 +277,10 @@ export type Database = {
         Returns: boolean
       }
       mask_nip: { Args: { nip_text: string }; Returns: string }
+      process_new_user_whitelist: {
+        Args: { _email: string; _user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
