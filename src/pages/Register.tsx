@@ -118,7 +118,7 @@ const RegisterScreen = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="contoh@banyumaskab.go.id"
+                  placeholder="contoh@gmail.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="pl-10 h-11 bg-slate-50"

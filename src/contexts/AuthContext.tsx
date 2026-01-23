@@ -36,67 +36,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Helper: Cek apakah email masih terdaftar di whitelist
-  const checkAccess = async (email: string | undefined) => {
+  const verifyWhitelist = async (email: string | undefined) => {
     if (!email) return false;
-    const { data: isAllowed } = await supabase.rpc('check_whitelist_email', { 
-      _email: email.toLowerCase().trim() 
-    });
-    return !!isAllowed;
+    try {
+      const { data: isWhitelisted } = await supabase.rpc('check_whitelist_email', { 
+        _email: email.toLowerCase().trim() 
+      });
+      return !!isWhitelisted;
+    } catch (e) {
+      return false;
+    }
   };
 
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          // PERBAIKAN: Jika user sudah login tapi email dihapus admin, paksa logout
-          const isAllowed = await checkAccess(session.user.email);
+        if (currentSession?.user) {
+          const isAllowed = await verifyWhitelist(currentSession.user.email);
+          
           if (!isAllowed) {
             await supabase.auth.signOut();
+            setSession(null);
             setUser(null);
             setRole(null);
-            return;
+          } else {
+            setSession(currentSession);
+            setUser(currentSession.user);
+            const userRole = await fetchUserRole(currentSession.user.id);
+            setRole(userRole);
           }
-
-          const userRole = await fetchUserRole(session.user.id);
-          setRole(userRole);
         }
-        setSession(session);
-        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error("Auth Init Error:", error);
       } finally {
+        // PERBAIKAN: Selalu matikan loading agar tampilan login muncul
         setLoading(false);
       }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        // PERBAIKAN: Cek akses setiap kali ada perubahan status/refresh
-        const isAllowed = await checkAccess(session.user.email);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (currentSession?.user) {
+        const isAllowed = await verifyWhitelist(currentSession.user.email);
+        
         if (!isAllowed) {
           if (event !== 'SIGNED_OUT') {
-            toast.error("Akses Anda telah dicabut.");
+            toast.error("Akses Ditolak. Akun Anda tidak terdaftar.");
             await supabase.auth.signOut();
           }
           setUser(null);
+          setSession(null);
           setRole(null);
-          setLoading(false);
-          return;
+        } else {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          // Ambil role terbaru setiap kali ada perubahan status (sinkronisasi role)
+          const userRole = await fetchUserRole(currentSession.user.id);
+          setRole(userRole);
         }
-
-        setSession(session);
-        setUser(session.user);
-        fetchUserRole(session.user.id).then(setRole);
       } else {
         setSession(null);
         setUser(null);
         setRole(null);
       }
 
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN' || event === 'SIGNED_OUT' || !session) {
+      // Pastikan loading mati pada event krusial
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || !currentSession) {
         setLoading(false);
       }
     });
@@ -106,10 +114,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     const cleanEmail = email.toLowerCase().trim();
+    const isAllowed = await verifyWhitelist(cleanEmail);
     
-    // Cek whitelist sebelum login
-    const isAllowed = await checkAccess(cleanEmail);
-    if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam sistem." };
+    if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam database pegawai." };
 
     const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
     if (error) {
@@ -122,12 +129,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, fullName: string): Promise<{ error: string | null }> => {
     try {
       const cleanEmail = email.toLowerCase().trim();
-      const { data: isWhitelisted, error: checkError } = await supabase.rpc('check_whitelist_email', { 
-        _email: cleanEmail 
-      });
+      const isAllowed = await verifyWhitelist(cleanEmail);
 
-      if (checkError) return { error: "Gagal verifikasi database." };
-      if (!isWhitelisted) return { error: "Email belum terdaftar dalam database pegawai." };
+      if (!isAllowed) return { error: "Email Anda belum didaftarkan oleh Admin." };
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: cleanEmail,
@@ -140,14 +144,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (signUpError) return { error: signUpError.message };
 
-      // SINKRONISASI STATUS: Otomatis Aktif setelah pendaftaran
+      // REVISI: Status berubah jadi 'Aktif' (is_registered: true) HANYA setelah sukses daftar
       if (authData.user) {
         await supabase.from('pegawai_whitelist').update({ is_registered: true }).eq('email', cleanEmail);
       }
 
       return { error: null };
     } catch (err: any) {
-      return { error: "Terjadi kesalahan sistem pendaftaran." };
+      return { error: "Terjadi kesalahan pendaftaran." };
     }
   };
 
