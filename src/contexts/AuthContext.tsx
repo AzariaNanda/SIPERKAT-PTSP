@@ -56,15 +56,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        console.log('[Auth] initAuth:getSession', {
+          hasSession: !!currentSession,
+          hasUser: !!currentSession?.user,
+          email: currentSession?.user?.email,
+        });
         
         if (currentSession?.user) {
           const isAllowed = await verifyWhitelist(currentSession.user.email);
+
+          console.log('[Auth] initAuth:verifyWhitelist', {
+            email: currentSession.user.email,
+            isAllowed,
+          });
           
           if (!isAllowed) {
             await supabase.auth.signOut();
             handleClearAuth();
           } else {
             const userRole = await fetchUserRole(currentSession.user.id);
+
+            console.log('[Auth] initAuth:fetchUserRole', {
+              userId: currentSession.user.id,
+              role: userRole,
+            });
+
             setSession(currentSession);
             setUser(currentSession.user);
             setRole(userRole);
@@ -74,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         console.error("Auth Init Error:", error);
       } finally {
-        // LOADING BERHENTI DI SINI: Login page akan selalu muncul
+        // Selalu hentikan loading agar app tidak stuck di splash screen
         setLoading(false);
       }
     };
@@ -107,27 +124,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (currentSession?.user) {
-        const isAllowed = await verifyWhitelist(currentSession.user.email);
-        
-        if (!isAllowed) {
-          if (event !== 'SIGNED_OUT') {
-            toast.error("Akses Ditolak. Email Anda tidak terdaftar.");
-            await supabase.auth.signOut();
-          }
-          handleClearAuth();
-        } else {
-          setSession(currentSession);
-          setUser(currentSession.user);
-          const userRole = await fetchUserRole(currentSession.user.id);
-          setRole(userRole);
-          setupRoleRealtime(currentSession.user.id);
-        }
-      } else {
-        handleClearAuth();
-      }
+      console.log('[Auth] onAuthStateChange', {
+        event,
+        hasSession: !!currentSession,
+        hasUser: !!currentSession?.user,
+        email: currentSession?.user?.email,
+      });
 
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || !currentSession) {
+      try {
+        if (currentSession?.user) {
+          // Urutan wajib: cek sesi -> whitelist -> role -> stop loading
+          const isAllowed = await verifyWhitelist(currentSession.user.email);
+
+          console.log('[Auth] onAuthStateChange:verifyWhitelist', {
+            email: currentSession.user.email,
+            isAllowed,
+          });
+          
+          if (!isAllowed) {
+            if (event !== 'SIGNED_OUT') {
+              toast.error("Akses Ditolak. Email Anda tidak terdaftar.");
+              await supabase.auth.signOut();
+            }
+            handleClearAuth();
+          } else {
+            setSession(currentSession);
+            setUser(currentSession.user);
+            const userRole = await fetchUserRole(currentSession.user.id);
+
+            console.log('[Auth] onAuthStateChange:fetchUserRole', {
+              userId: currentSession.user.id,
+              role: userRole,
+            });
+
+            setRole(userRole);
+            setupRoleRealtime(currentSession.user.id);
+          }
+        } else {
+          handleClearAuth();
+        }
+      } catch (err) {
+        console.error('[Auth] onAuthStateChange error', err);
+      } finally {
+        // KRITIS: selalu hentikan loading (termasuk event INITIAL_SESSION)
         setLoading(false);
       }
     });
