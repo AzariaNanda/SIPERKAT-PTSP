@@ -26,7 +26,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<AppRole>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fungsi untuk mengambil role dari tabel user_roles
   const fetchUserRole = async (userId: string): Promise<AppRole> => {
     try {
       const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
@@ -37,7 +36,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fungsi Verifikasi Whitelist (Security Guard)
   const verifyWhitelist = async (email: string | undefined) => {
     if (!email) return false;
     try {
@@ -51,152 +49,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    let roleSubscription: any = null;
-
     const initAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-        console.log('[Auth] initAuth:getSession', {
-          hasSession: !!currentSession,
-          hasUser: !!currentSession?.user,
-          email: currentSession?.user?.email,
-        });
         
         if (currentSession?.user) {
           const isAllowed = await verifyWhitelist(currentSession.user.email);
-
-          console.log('[Auth] initAuth:verifyWhitelist', {
-            email: currentSession.user.email,
-            isAllowed,
-          });
           
           if (!isAllowed) {
             await supabase.auth.signOut();
-            handleClearAuth();
+            setSession(null);
+            setUser(null);
+            setRole(null);
           } else {
-            const userRole = await fetchUserRole(currentSession.user.id);
-
-            console.log('[Auth] initAuth:fetchUserRole', {
-              userId: currentSession.user.id,
-              role: userRole,
-            });
-
             setSession(currentSession);
             setUser(currentSession.user);
+            const userRole = await fetchUserRole(currentSession.user.id);
             setRole(userRole);
-            setupRoleRealtime(currentSession.user.id);
           }
         }
       } catch (error) {
         console.error("Auth Init Error:", error);
       } finally {
-        // Selalu hentikan loading agar app tidak stuck di splash screen
+        // PERBAIKAN: Selalu matikan loading agar tampilan login muncul
         setLoading(false);
       }
-    };
-
-    // Fungsi untuk memantau perubahan role secara LIVE
-    const setupRoleRealtime = (userId: string) => {
-      if (roleSubscription) roleSubscription.unsubscribe();
-
-      roleSubscription = supabase
-        .channel('public:user_roles')
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'user_roles', filter: `user_id=eq.${userId}` },
-          (payload) => {
-            const newRole = payload.new.role as AppRole;
-            setRole(newRole);
-            toast.info(`Hak akses Anda telah diperbarui menjadi: ${newRole?.toUpperCase()}`);
-          }
-        )
-        .subscribe();
-    };
-
-    const handleClearAuth = () => {
-      setSession(null);
-      setUser(null);
-      setRole(null);
-      if (roleSubscription) roleSubscription.unsubscribe();
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log('[Auth] onAuthStateChange', {
-        event,
-        hasSession: !!currentSession,
-        hasUser: !!currentSession?.user,
-        email: currentSession?.user?.email,
-      });
-
-      try {
-        if (currentSession?.user) {
-          // Urutan wajib: cek sesi -> whitelist -> role -> stop loading
-          const isAllowed = await verifyWhitelist(currentSession.user.email);
-
-          console.log('[Auth] onAuthStateChange:verifyWhitelist', {
-            email: currentSession.user.email,
-            isAllowed,
-          });
-          
-          if (!isAllowed) {
-            if (event !== 'SIGNED_OUT') {
-              toast.error("Akses Ditolak. Email Anda tidak terdaftar.");
-              await supabase.auth.signOut();
-            }
-            handleClearAuth();
-          } else {
-            setSession(currentSession);
-            setUser(currentSession.user);
-            const userRole = await fetchUserRole(currentSession.user.id);
-
-            console.log('[Auth] onAuthStateChange:fetchUserRole', {
-              userId: currentSession.user.id,
-              role: userRole,
-            });
-
-            setRole(userRole);
-            setupRoleRealtime(currentSession.user.id);
+      if (currentSession?.user) {
+        const isAllowed = await verifyWhitelist(currentSession.user.email);
+        
+        if (!isAllowed) {
+          if (event !== 'SIGNED_OUT') {
+            toast.error("Akses Ditolak. Akun Anda tidak terdaftar.");
+            await supabase.auth.signOut();
           }
+          setUser(null);
+          setSession(null);
+          setRole(null);
         } else {
-          handleClearAuth();
+          setSession(currentSession);
+          setUser(currentSession.user);
+          // Ambil role terbaru setiap kali ada perubahan status (sinkronisasi role)
+          const userRole = await fetchUserRole(currentSession.user.id);
+          setRole(userRole);
         }
-      } catch (err) {
-        console.error('[Auth] onAuthStateChange error', err);
-      } finally {
-        // KRITIS: selalu hentikan loading (termasuk event INITIAL_SESSION)
+      } else {
+        setSession(null);
+        setUser(null);
+        setRole(null);
+      }
+
+      // Pastikan loading mati pada event krusial
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || !currentSession) {
         setLoading(false);
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-      if (roleSubscription) roleSubscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     const cleanEmail = email.toLowerCase().trim();
     const isAllowed = await verifyWhitelist(cleanEmail);
     
-    // 1) Cek whitelist terlebih dahulu
-    if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam otoritas sistem." };
-
-    // 2) Jika ada di whitelist, pastikan email sudah pernah registrasi (ada di auth.users)
-    try {
-      const { data: isRegistered, error: regErr } = await supabase.rpc('is_email_registered', { _email: cleanEmail });
-      if (regErr) {
-        console.log('[Auth] signIn:is_email_registered RPC error', { email: cleanEmail, message: regErr.message });
-      }
-      if (!isRegistered) {
-        return { error: "Email belum melakukan registrasi dalam sistem Siperkat." };
-      }
-    } catch (err: any) {
-      console.log('[Auth] signIn:is_email_registered exception', { email: cleanEmail, err });
-      // Jangan blokir login dengan pesan menyesatkan; fallback ke proses login normal.
-    }
+    if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam database pegawai." };
 
     const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
     if (error) {
@@ -224,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (signUpError) return { error: signUpError.message };
 
-      // REVISI: Status 'Aktif' (true) hanya terjadi saat signUp sukses
+      // REVISI: Status berubah jadi 'Aktif' (is_registered: true) HANYA setelah sukses daftar
       if (authData.user) {
         await supabase.from('pegawai_whitelist').update({ is_registered: true }).eq('email', cleanEmail);
       }
@@ -249,8 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try { await supabase.auth.signOut(); } catch (e) {}
-    setSession(null);
     setUser(null);
+    setSession(null);
     setRole(null);
     toast.success('LOGOUT BERHASIL');
   };
