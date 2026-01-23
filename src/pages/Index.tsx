@@ -131,7 +131,7 @@ const LoginScreen = () => {
                 <div className="pt-2">
                   <Button 
                     type="submit" 
-                    disabled={loading || isSubmitting} 
+                    disabled={isSubmitting} 
                     className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all uppercase"
                   >
                     {isSubmitting ? "Memproses..." : <><LogIn className="w-5 h-5 mr-2" />Masuk Sistem</>}
