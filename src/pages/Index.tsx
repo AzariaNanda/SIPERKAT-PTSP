@@ -222,8 +222,10 @@ const MainApp = () => {
 
 const Index = () => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-primary animate-pulse tracking-widest uppercase">SIPERKAT</div>;
-  return user ? <MainApp /> : <LoginScreen />;
+  // Halaman publik (landing/login) harus tetap bisa dirender meski auth masih loading
+  // Proteksi hanya berlaku saat user sudah punya sesi dan masuk ke sistem utama.
+  if (user) return <MainApp />;
+  return <LoginScreen />;
 };
 
 export default Index;
