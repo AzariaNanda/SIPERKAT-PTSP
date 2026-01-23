@@ -21,6 +21,62 @@ export const PegawaiManagement = () => {
 
   const MAIN_ADMIN_EMAIL = 'subbagumpeg.dpmptspbms@gmail.com';
 
+  const enrichAndSyncRegistrationStatus = async (rows: any[]) => {
+    // Cross-check whitelist vs auth.users via RPC `is_email_registered`
+    // - UI akan selalu akurat saat halaman load
+    // - DB akan disinkronkan (set is_registered=true) bila ternyata sudah registrasi
+    try {
+      const checks = await Promise.all(
+        (rows || []).map(async (r) => {
+          const email = String(r.email || '').toLowerCase().trim();
+          if (!email) return { email, isRegistered: false };
+
+          const { data, error } = await supabase.rpc('is_email_registered', { _email: email });
+          if (error) {
+            console.log('[PegawaiManagement] is_email_registered RPC error', { email, message: error.message });
+            return { email, isRegistered: false };
+          }
+          return { email, isRegistered: !!data };
+        })
+      );
+
+      const registeredEmailSet = new Set(checks.filter((c) => c.isRegistered).map((c) => c.email));
+
+      const enriched = (rows || []).map((r) => {
+        const email = String(r.email || '').toLowerCase().trim();
+        const computedRegistered = registeredEmailSet.has(email);
+        return {
+          ...r,
+          // Prioritas: hasil cross-check ke user table
+          is_registered: computedRegistered || !!r.is_registered,
+        };
+      });
+
+      // Sinkron ke DB untuk kasus data whitelist belum ter-update
+      const needSyncEmails = enriched
+        .filter((r) => {
+          const email = String(r.email || '').toLowerCase().trim();
+          return registeredEmailSet.has(email) && !r.is_registered;
+        })
+        .map((r) => String(r.email || '').toLowerCase().trim());
+
+      if (needSyncEmails.length > 0) {
+        const { error: syncErr } = await supabase
+          .from('pegawai_whitelist')
+          .update({ is_registered: true })
+          .in('email', needSyncEmails);
+        if (syncErr) {
+          console.log('[PegawaiManagement] sync whitelist is_registered error', { message: syncErr.message, needSyncEmails });
+        }
+      }
+
+      return enriched;
+    } catch (err) {
+      console.log('[PegawaiManagement] enrichAndSyncRegistrationStatus exception', err);
+      return rows || [];
+    }
+  };
+
   const fetchWhitelist = async () => {
     try {
       const { data, error } = await supabase
@@ -28,7 +84,8 @@ export const PegawaiManagement = () => {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setWhitelist(data || []);
+      const enriched = await enrichAndSyncRegistrationStatus(data || []);
+      setWhitelist(enriched);
     } catch (error: any) {
       toast.error("Gagal memuat data pegawai");
     } finally {
@@ -36,7 +93,21 @@ export const PegawaiManagement = () => {
     }
   };
 
-  useEffect(() => { fetchWhitelist(); }, []);
+  useEffect(() => {
+    fetchWhitelist();
+
+    // Real-time: bila whitelist berubah (insert/update/delete), refresh agar status selalu terbaru
+    const channel = supabase
+      .channel('public:pegawai_whitelist')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pegawai_whitelist' }, () => {
+        fetchWhitelist();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleAddEmail = async () => {
     const email = newEmail.toLowerCase().trim();

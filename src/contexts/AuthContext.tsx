@@ -181,7 +181,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const cleanEmail = email.toLowerCase().trim();
     const isAllowed = await verifyWhitelist(cleanEmail);
     
-    if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam database pimpinan." };
+    // 1) Cek whitelist terlebih dahulu
+    if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam otoritas sistem." };
+
+    // 2) Jika ada di whitelist, pastikan email sudah pernah registrasi (ada di auth.users)
+    try {
+      const { data: isRegistered, error: regErr } = await supabase.rpc('is_email_registered', { _email: cleanEmail });
+      if (regErr) {
+        console.log('[Auth] signIn:is_email_registered RPC error', { email: cleanEmail, message: regErr.message });
+      }
+      if (!isRegistered) {
+        return { error: "Email belum melakukan registrasi dalam sistem Siperkat." };
+      }
+    } catch (err: any) {
+      console.log('[Auth] signIn:is_email_registered exception', { email: cleanEmail, err });
+      // Jangan blokir login dengan pesan menyesatkan; fallback ke proses login normal.
+    }
 
     const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
     if (error) {
