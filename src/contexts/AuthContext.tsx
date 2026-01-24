@@ -146,17 +146,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const cleanEmail = email.toLowerCase().trim();
-    const isAllowed = await verifyWhitelist(cleanEmail);
-    
-    if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam database pegawai." };
+    try {
+      const cleanEmail = email.toLowerCase().trim();
 
-    const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
-    if (error) {
-      const msg = error.message === 'Invalid login credentials' ? 'Email atau password salah' : error.message;
-      return { error: msg };
+      // Hindari UI hang bila RPC whitelist lambat: fallback aman = ditolak.
+      const isAllowed = await withTimeout(verifyWhitelist(cleanEmail), 3500, false);
+
+      if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam database pegawai." };
+
+      // Hindari "Memproses..." tanpa akhir bila request auth bermasalah
+      const result = await withTimeout(
+        supabase.auth.signInWithPassword({ email: cleanEmail, password }),
+        8000,
+        { data: { user: null, session: null }, error: { message: 'TIMEOUT' } as any }
+      );
+
+      const error = (result as any)?.error;
+      if (error) {
+        const raw = String(error.message || 'Terjadi kesalahan');
+        const msg = raw === 'Invalid login credentials'
+          ? 'Email atau password salah'
+          : raw === 'TIMEOUT'
+            ? 'Koneksi lambat. Silakan coba lagi.'
+            : raw;
+        return { error: msg };
+      }
+
+      return { error: null };
+    } catch (e: any) {
+      return { error: 'Terjadi kesalahan login. Silakan coba lagi.' };
     }
-    return { error: null };
   };
 
   const signUp = async (email: string, password: string, fullName: string): Promise<{ error: string | null }> => {
