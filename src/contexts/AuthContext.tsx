@@ -26,6 +26,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<AppRole>(null);
   const [loading, setLoading] = useState(true);
 
+  const withTimeout = async <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> => {
+    let timeoutId: number | undefined;
+    const timeout = new Promise<T>((resolve) => {
+      timeoutId = window.setTimeout(() => resolve(fallback), ms);
+    });
+    try {
+      return await Promise.race([promise, timeout]);
+    } finally {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    }
+  };
+
   const fetchUserRole = async (userId: string): Promise<AppRole> => {
     try {
       const { data, error } = await supabase.rpc('get_user_role', { _user_id: userId });
@@ -52,10 +64,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
+
+        // Matikan loading secepat mungkin setelah status dasar auth diketahui.
+        // Role/whitelist akan disinkronkan secara async tanpa menahan UI.
+        setLoading(false);
+
         if (currentSession?.user) {
-          const isAllowed = await verifyWhitelist(currentSession.user.email);
-          
+          const email = currentSession.user.email;
+          const userId = currentSession.user.id;
+
+          // Jalankan whitelist check & fetch role secara paralel.
+          // Jika RPC lambat, default aman: whitelist=false, role='user'.
+          const [isAllowed, userRole] = await Promise.all([
+            withTimeout(verifyWhitelist(email), 3500, false),
+            withTimeout(fetchUserRole(userId), 3500, 'user' as AppRole),
+          ]);
+
           if (!isAllowed) {
             await supabase.auth.signOut();
             setSession(null);
@@ -64,14 +88,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } else {
             setSession(currentSession);
             setUser(currentSession.user);
-            const userRole = await fetchUserRole(currentSession.user.id);
-            setRole(userRole);
+            setRole(userRole || 'user');
           }
+        } else {
+          setSession(null);
+          setUser(null);
+          setRole(null);
         }
       } catch (error) {
         console.error("Auth Init Error:", error);
       } finally {
-        // PERBAIKAN: Selalu matikan loading agar tampilan login muncul
+        // Pertahankan safety: jangan biarkan loading menggantung.
         setLoading(false);
       }
     };
@@ -79,9 +106,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      // Pastikan UI tidak tertahan (role/whitelist sinkron async)
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || !currentSession) {
+        setLoading(false);
+      }
+
       if (currentSession?.user) {
-        const isAllowed = await verifyWhitelist(currentSession.user.email);
-        
+        const email = currentSession.user.email;
+        const userId = currentSession.user.id;
+
+        const [isAllowed, userRole] = await Promise.all([
+          withTimeout(verifyWhitelist(email), 3500, false),
+          withTimeout(fetchUserRole(userId), 3500, 'user' as AppRole),
+        ]);
+
         if (!isAllowed) {
           if (event !== 'SIGNED_OUT') {
             toast.error("Akses Ditolak. Akun Anda tidak terdaftar.");
@@ -90,23 +128,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(null);
           setSession(null);
           setRole(null);
-        } else {
-          setSession(currentSession);
-          setUser(currentSession.user);
-          // Ambil role terbaru setiap kali ada perubahan status (sinkronisasi role)
-          const userRole = await fetchUserRole(currentSession.user.id);
-          setRole(userRole);
+          return;
         }
-      } else {
-        setSession(null);
-        setUser(null);
-        setRole(null);
+
+        setSession(currentSession);
+        setUser(currentSession.user);
+        setRole(userRole || 'user');
+        return;
       }
 
-      // Pastikan loading mati pada event krusial
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || !currentSession) {
-        setLoading(false);
-      }
+      setSession(null);
+      setUser(null);
+      setRole(null);
     });
 
     return () => subscription.unsubscribe();
