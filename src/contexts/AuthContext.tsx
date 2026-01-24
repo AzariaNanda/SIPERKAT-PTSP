@@ -20,6 +20,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Daftar email eksklusif yang SELALU diizinkan (tidak bergantung pada RPC whitelist).
+const ALWAYS_ALLOWED_EMAILS = [
+  'subbagumpeg.dpmptspbms@gmail.com',
+  'dpmpptspkabbanyumas@gmail.com',
+];
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -50,9 +56,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const verifyWhitelist = async (email: string | undefined) => {
     if (!email) return false;
+
+    // Exception: email khusus langsung lolos (tidak perlu cek RPC)
+    const cleanEmail = email.toLowerCase().trim();
+    if (ALWAYS_ALLOWED_EMAILS.includes(cleanEmail)) {
+      return true;
+    }
+
     try {
-      const { data: isWhitelisted } = await supabase.rpc('check_whitelist_email', { 
-        _email: email.toLowerCase().trim() 
+      const { data: isWhitelisted } = await supabase.rpc('check_whitelist_email', {
+        _email: cleanEmail
       });
       return !!isWhitelisted;
     } catch (e) {
