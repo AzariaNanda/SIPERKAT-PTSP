@@ -43,15 +43,18 @@ const LoginScreen = () => {
     }
 
     setIsSubmitting(true);
-    // Logika login sekarang langsung bergantung pada hasil signIn Supabase
-    // Jika email tidak ada di whitelist, Supabase akan menolak pendaftaran akun sejak awal.
-    const { error } = await signIn(email, password);
-    if (error) {
-      toast.error("LOGIN GAGAL", { description: error });
-    } else {
-      toast.success("SELAMAT DATANG", { description: "Berhasil masuk ke sistem SIPERKAT." });
+    try {
+      // Logika login sekarang langsung bergantung pada hasil signIn.
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast.error("LOGIN GAGAL", { description: error });
+      } else {
+        toast.success("SELAMAT DATANG", { description: "Berhasil masuk ke sistem SIPERKAT." });
+      }
+    } finally {
+      // Pastikan tombol tidak stuck "Memproses..." meskipun ada error tak ter-handle.
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
