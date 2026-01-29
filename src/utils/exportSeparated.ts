@@ -1,28 +1,38 @@
 import * as XLSX from 'xlsx';
 import type { Peminjaman } from '@/hooks/usePeminjaman';
 
-// Helper untuk memformat tanggal agar rapi di Excel
-const formatDate = (date: string) => new Date(date).toLocaleDateString('id-ID');
+// Helper untuk memformat tanggal dan waktu (Timestamp)
+const formatTimestamp = (date: string) => {
+  if (!date) return '-';
+  const d = new Date(date);
+  return d.toLocaleString('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  });
+};
 
-/**
- * Ekspor Data Pengajuan Kendaraan
- */
+/* Ekspor Data Pengajuan Kendaraan*/
 export const exportKendaraanData = (peminjaman: Peminjaman[], year: number, kendaraanList: any[]) => {
   const data = peminjaman
     .filter(p => p.jenis_asset === 'kendaraan')
     .map(p => {
       const aset = kendaraanList.find(k => k.id === p.asset_id);
       return {
-        'TANGGAL PENGAJUAN': formatDate(p.created_at),
-        'KETERANGAN': 'KENDARAAN',
-        'NAMA KENDARAAN': aset ? `${aset.nama_kendaraan} (${aset.no_polisi})` : 'ASET DIHAPUS',
-        'NAMA PEMOHON': p.nama_pemohon,
-        'NIP': p.nip,
-        'UNIT/BIDANG': p.unit,
-        'TGL MULAI': p.tgl_mulai,
-        'JAM': `${p.jam_mulai} - ${p.jam_selesai}`,
-        'KEPERLUAN': p.keperluan,
-        'STATUS': p.status,
+        'Timestamp': formatTimestamp(p.timestamp || p.created_at),
+        'Nama Pemohon': p.nama_pemohon,
+        'NIP': p.nip || '-',
+        'Unit/Bidang': p.unit,
+        'Email Pemohon': p.email,
+        'Kendaraan Dipilih': aset ? `${aset.nama_kendaraan} (${aset.plat_nomor || aset.no_polisi})` : 'ASET DIHAPUS',
+        'Tgl Mulai': p.tgl_mulai,
+        'Jam Mulai': p.jam_mulai,
+        'Tgl Selesai': p.tgl_selesai,
+        'Jam Selesai': p.jam_selesai,
+        'Keperluan': p.keperluan,
+        'Supir (Ya/Tidak)': p.butuh_supir === 'ya' ? 'Ya' : 'Tidak',
+        'Atasan Penyetuju': '-', // Placeholder
+        'Status': p.status,
+        'Catatan Admin': p.catatan_admin || '-',
       };
     });
 
@@ -32,25 +42,28 @@ export const exportKendaraanData = (peminjaman: Peminjaman[], year: number, kend
   XLSX.writeFile(wb, `Data_Pengajuan_Kendaraan_${year}.xlsx`);
 };
 
-/**
- * Ekspor Data Pengajuan Ruangan
- */
+/*Ekspor Data Pengajuan Ruangan */
 export const exportRuanganData = (peminjaman: Peminjaman[], year: number, ruanganList: any[]) => {
   const data = peminjaman
     .filter(p => p.jenis_asset === 'ruangan')
     .map(p => {
       const aset = ruanganList.find(r => r.id === p.asset_id);
       return {
-        'TANGGAL PENGAJUAN': formatDate(p.created_at),
-        'KETERANGAN': 'RUANGAN',
-        'NAMA RUANGAN': aset ? aset.nama_ruangan : 'ASET DIHAPUS',
-        'NAMA PEMOHON': p.nama_pemohon,
-        'NIP': p.nip,
-        'UNIT/BIDANG': p.unit,
-        'TGL MULAI': p.tgl_mulai,
-        'JAM': `${p.jam_mulai} - ${p.jam_selesai}`,
-        'KEPERLUAN': p.keperluan,
-        'STATUS': p.status,
+        'Timestamp': formatTimestamp(p.timestamp || p.created_at),
+        'Nama Pemohon': p.nama_pemohon,
+        'Unit/Bidang': p.unit,
+        'Email Pemohon': p.email,
+        'Ruangan': aset ? aset.nama_ruangan : 'ASET DIHAPUS',
+        'Tgl Mulai': p.tgl_mulai,
+        'Jam Mulai': p.jam_mulai,
+        'Tgl Selesai': p.tgl_selesai,
+        'Jam Selesai': p.jam_selesai,
+        'Agenda': p.keperluan,
+        'Jumlah Peserta': p.jumlah_peserta || '-',
+        'Kebutuhan Tambahan': '-', // Placeholder
+        'Atasan Penyetuju': '-', // Placeholder
+        'Status': p.status,
+        'Catatan Admin': p.catatan_admin || '-',
       };
     });
 
@@ -60,41 +73,59 @@ export const exportRuanganData = (peminjaman: Peminjaman[], year: number, ruanga
   XLSX.writeFile(wb, `Data_Pengajuan_Ruangan_${year}.xlsx`);
 };
 
-/**
- * Ekspor Semua Data (Sheet Berbeda)
- */
+/*Ekspor Semua Data (Format diterapkan pada masing-masing sheet)*/
 export const exportAllDataSeparated = (peminjaman: Peminjaman[], year: number, kendaraanList: any[], ruanganList: any[]) => {
   const wb = XLSX.utils.book_new();
 
-  // Sheet 1: Kendaraan
+  // Sheet 1: Pengajuan Kendaraan
   const kData = peminjaman.filter(p => p.jenis_asset === 'kendaraan').map(p => {
     const aset = kendaraanList.find(k => k.id === p.asset_id);
     return {
-      'TGL PENGAJUAN': formatDate(p.created_at),
-      'KETERANGAN': 'KENDARAAN',
-      'NAMA ASET': aset ? `${aset.nama_kendaraan} (${aset.no_polisi})` : 'ASET DIHAPUS',
-      'PEMOHON': p.nama_pemohon,
-      'UNIT': p.unit,
-      'WAKTU': `${p.tgl_mulai} (${p.jam_mulai} - ${p.jam_selesai})`,
-      'STATUS': p.status
+      'Timestamp': formatTimestamp(p.timestamp || p.created_at),
+      'Nama Pemohon': p.nama_pemohon,
+      'NIP': p.nip || '-',
+      'Unit/Bidang': p.unit,
+      'Email Pemohon': p.email,
+      'Kendaraan Dipilih': aset ? `${aset.nama_kendaraan} (${aset.plat_nomor || aset.no_polisi})` : 'ASET DIHAPUS',
+      'Tgl Mulai': p.tgl_mulai,
+      'Jam Mulai': p.jam_mulai,
+      'Tgl Selesai': p.tgl_selesai,
+      'Jam Selesai': p.jam_selesai,
+      'Keperluan': p.keperluan,
+      'Supir (Ya/Tidak)': p.butuh_supir === 'ya' ? 'Ya' : 'Tidak',
+      'Atasan Penyetuju': '-',
+      'Status': p.status,
+      'Catatan Admin': p.catatan_admin || '-',
     };
   });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kData), 'Pengajuan Kendaraan');
+  if (kData.length > 0) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(kData), 'Pengajuan Kendaraan');
+  }
 
-  // Sheet 2: Ruangan
+  // Sheet 2: Pengajuan Ruangan
   const rData = peminjaman.filter(p => p.jenis_asset === 'ruangan').map(p => {
     const aset = ruanganList.find(r => r.id === p.asset_id);
     return {
-      'TGL PENGAJUAN': formatDate(p.created_at),
-      'KETERANGAN': 'RUANGAN',
-      'NAMA ASET': aset ? aset.nama_ruangan : 'ASET DIHAPUS',
-      'PEMOHON': p.nama_pemohon,
-      'UNIT': p.unit,
-      'WAKTU': `${p.tgl_mulai} (${p.jam_mulai} - ${p.jam_selesai})`,
-      'STATUS': p.status
+      'Timestamp': formatTimestamp(p.timestamp || p.created_at),
+      'Nama Pemohon': p.nama_pemohon,
+      'Unit/Bidang': p.unit,
+      'Email Pemohon': p.email,
+      'Ruangan': aset ? aset.nama_ruangan : 'ASET DIHAPUS',
+      'Tgl Mulai': p.tgl_mulai,
+      'Jam Mulai': p.jam_mulai,
+      'Tgl Selesai': p.tgl_selesai,
+      'Jam Selesai': p.jam_selesai,
+      'Agenda': p.keperluan,
+      'Jumlah Peserta': p.jumlah_peserta || '-',
+      'Kebutuhan Tambahan': '-',
+      'Atasan Penyetuju': '-',
+      'Status': p.status,
+      'Catatan Admin': p.catatan_admin || '-',
     };
   });
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rData), 'Pengajuan Ruangan');
+  if (rData.length > 0) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rData), 'Pengajuan Ruangan');
+  }
 
   XLSX.writeFile(wb, `Laporan_Peminjaman_Terpadu_${year}.xlsx`);
 };

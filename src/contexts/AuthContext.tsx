@@ -196,7 +196,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const cleanEmail = email.toLowerCase().trim();
       const isAllowed = await verifyWhitelist(cleanEmail);
 
-      if (!isAllowed) return { error: "Email Anda belum didaftarkan oleh Admin." };
+      if (!isAllowed) return { error: "Email belum terdaftar dalam tabel pegawai. Silahkan hubungi admin." };
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: cleanEmail,
