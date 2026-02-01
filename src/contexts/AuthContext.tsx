@@ -26,7 +26,7 @@ const ALWAYS_ALLOWED_EMAILS = [
   'dpmpptspkabbanyumas@gmail.com',
 ];
 
-// KONFIGURASI: Durasi timeout diperpanjang menjadi 10 detik agar lebih stabil
+// Durasi timeout diperpanjang menjadi 10 detik agar lebih stabil
 const AUTH_TIMEOUT = 10000; 
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const verifyWhitelist = async (email: string | undefined) => {
     if (!email) return false;
 
-    // Exception: email khusus langsung lolos (tidak perlu cek RPC)
+    // Email khusus (tidak perlu cek RPC)
     const cleanEmail = email.toLowerCase().trim();
     if (ALWAYS_ALLOWED_EMAILS.includes(cleanEmail)) {
       return true;
@@ -85,14 +85,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const email = currentSession.user.email;
           const userId = currentSession.user.id;
 
-          // Verifikasi dengan timeout yang lebih panjang (10 detik)
+          // Verifikasi dengan timeout (10 detik)
           const [isAllowed, userRole] = await Promise.all([
             withTimeout(verifyWhitelist(email), AUTH_TIMEOUT, false),
             withTimeout(fetchUserRole(userId), AUTH_TIMEOUT, 'user' as AppRole),
           ]);
 
           if (!isAllowed) {
-            // REVISI: Jika timeout atau tidak terdaftar, paksa logout untuk kembali ke login
+            // Jika timeout atau tidak terdaftar, paksa logout untuk kembali ke login
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
@@ -159,7 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const cleanEmail = email.toLowerCase().trim();
       
-      // Menggunakan AUTH_TIMEOUT yang lebih panjang untuk cek whitelist
+      // AUTH_TIMEOUT yang lebih panjang untuk cek whitelist
       const isAllowed = await withTimeout(verifyWhitelist(cleanEmail), AUTH_TIMEOUT, false);
 
       if (!isAllowed) return { error: "Email Anda tidak terdaftar atau koneksi lambat." };
