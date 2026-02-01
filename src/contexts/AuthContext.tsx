@@ -26,6 +26,9 @@ const ALWAYS_ALLOWED_EMAILS = [
   'dpmpptspkabbanyumas@gmail.com',
 ];
 
+// KONFIGURASI: Durasi timeout diperpanjang menjadi 10 detik agar lebih stabil
+const AUTH_TIMEOUT = 10000; 
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -78,26 +81,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-        // Matikan loading secepat mungkin setelah status dasar auth diketahui.
-        // Role/whitelist akan disinkronkan secara async tanpa menahan UI.
-        setLoading(false);
-
         if (currentSession?.user) {
           const email = currentSession.user.email;
           const userId = currentSession.user.id;
 
-          // Jalankan whitelist check & fetch role secara paralel.
-          // Jika RPC lambat, default aman: whitelist=false, role='user'.
+          // Verifikasi dengan timeout yang lebih panjang (10 detik)
           const [isAllowed, userRole] = await Promise.all([
-            withTimeout(verifyWhitelist(email), 3500, false),
-            withTimeout(fetchUserRole(userId), 3500, 'user' as AppRole),
+            withTimeout(verifyWhitelist(email), AUTH_TIMEOUT, false),
+            withTimeout(fetchUserRole(userId), AUTH_TIMEOUT, 'user' as AppRole),
           ]);
 
           if (!isAllowed) {
+            // REVISI: Jika timeout atau tidak terdaftar, paksa logout untuk kembali ke login
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
             setRole(null);
+            toast.error("Sesi tidak valid atau koneksi timeout. Silakan login kembali.");
           } else {
             setSession(currentSession);
             setUser(currentSession.user);
@@ -111,7 +111,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         console.error("Auth Init Error:", error);
       } finally {
-        // Pertahankan safety: jangan biarkan loading menggantung.
         setLoading(false);
       }
     };
@@ -119,40 +118,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      // Pastikan UI tidak tertahan (role/whitelist sinkron async)
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || !currentSession) {
-        setLoading(false);
-      }
-
       if (currentSession?.user) {
         const email = currentSession.user.email;
         const userId = currentSession.user.id;
 
         const [isAllowed, userRole] = await Promise.all([
-          withTimeout(verifyWhitelist(email), 3500, false),
-          withTimeout(fetchUserRole(userId), 3500, 'user' as AppRole),
+          withTimeout(verifyWhitelist(email), AUTH_TIMEOUT, false),
+          withTimeout(fetchUserRole(userId), AUTH_TIMEOUT, 'user' as AppRole),
         ]);
 
         if (!isAllowed) {
           if (event !== 'SIGNED_OUT') {
-            toast.error("Akses Ditolak. Akun Anda tidak terdaftar.");
+            toast.error("Akses Ditolak atau Sesi Habis. Silakan login kembali.");
             await supabase.auth.signOut();
           }
           setUser(null);
           setSession(null);
           setRole(null);
+          setLoading(false);
           return;
         }
 
         setSession(currentSession);
         setUser(currentSession.user);
         setRole(userRole || 'user');
+        setLoading(false);
         return;
       }
 
       setSession(null);
       setUser(null);
       setRole(null);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -161,16 +158,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       const cleanEmail = email.toLowerCase().trim();
+      
+      // Menggunakan AUTH_TIMEOUT yang lebih panjang untuk cek whitelist
+      const isAllowed = await withTimeout(verifyWhitelist(cleanEmail), AUTH_TIMEOUT, false);
 
-      // Hindari UI hang bila RPC whitelist lambat: fallback aman = ditolak.
-      const isAllowed = await withTimeout(verifyWhitelist(cleanEmail), 3500, false);
+      if (!isAllowed) return { error: "Email Anda tidak terdaftar atau koneksi lambat." };
 
-      if (!isAllowed) return { error: "Email Anda tidak terdaftar dalam database pegawai." };
-
-      // Hindari "Memproses..." tanpa akhir bila request auth bermasalah
       const result = await withTimeout(
         supabase.auth.signInWithPassword({ email: cleanEmail, password }),
-        8000,
+        15000, // Timeout login 15 detik untuk stabilitas
         { data: { user: null, session: null }, error: { message: 'TIMEOUT' } as any }
       );
 
@@ -209,7 +205,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (signUpError) return { error: signUpError.message };
 
-      // REVISI: Status berubah jadi 'Aktif' (is_registered: true) HANYA setelah sukses daftar
       if (authData.user) {
         await supabase.from('pegawai_whitelist').update({ is_registered: true }).eq('email', cleanEmail);
       }
