@@ -20,14 +20,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Daftar email eksklusif yang SELALU diizinkan (tidak bergantung pada RPC whitelist).
+// Daftar email eksklusif yang SELALU diizinkan.
 const ALWAYS_ALLOWED_EMAILS = [
   'subbagumpeg.dpmptspbms@gmail.com',
   'dpmpptspkabbanyumas@gmail.com',
 ];
 
-// Durasi timeout diperpanjang menjadi 10 detik agar lebih stabil
-const AUTH_TIMEOUT = 10000; 
+// Durasi timeout 5 detik agar lebih stabil 
+const AUTH_TIMEOUT = 5000; 
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const verifyWhitelist = async (email: string | undefined) => {
     if (!email) return false;
 
-    // Email khusus (tidak perlu cek RPC)
+    // Email khusus tidak perlu cek RPC
     const cleanEmail = email.toLowerCase().trim();
     if (ALWAYS_ALLOWED_EMAILS.includes(cleanEmail)) {
       return true;
@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const email = currentSession.user.email;
           const userId = currentSession.user.id;
 
-          // Verifikasi dengan timeout (10 detik)
+          // Verifikasi dengan timeout (5 detik)
           const [isAllowed, userRole] = await Promise.all([
             withTimeout(verifyWhitelist(email), AUTH_TIMEOUT, false),
             withTimeout(fetchUserRole(userId), AUTH_TIMEOUT, 'user' as AppRole),
