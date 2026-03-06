@@ -33,7 +33,10 @@ export const usePeminjaman = (isAdmin: boolean = false) => {
   useEffect(() => {
     const channel = supabase.channel('peminjaman-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'data_peminjaman' }, 
-      () => queryClient.invalidateQueries({ queryKey: ['peminjaman'] }))
+      () => {
+        // Refetch di background (tanpa mengubah state isLoading awal)
+        queryClient.refetchQueries({ queryKey: ['peminjaman'], type: 'active' });
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [queryClient]);

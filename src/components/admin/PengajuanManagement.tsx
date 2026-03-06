@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { 
   ClipboardList, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, 
-  Clock, X, Check, MessageSquare, Pencil, Calendar, FileDown 
+  Clock, X, Check, MessageSquare, Pencil, Calendar, FileDown, AlertTriangle 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,7 +14,6 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { usePeminjaman, type StatusPeminjaman } from '@/hooks/usePeminjaman';
 import { useKendaraan } from '@/hooks/useKendaraan';
 import { useRuangan } from '@/hooks/useRuangan';
-// Pastikan file utility exportSeparated.ts Anda sudah menerima parameter kendaraanList & ruanganList
 import { exportKendaraanData, exportRuanganData, exportAllDataSeparated } from '@/utils/exportSeparated';
 import { toast } from 'sonner';
 
@@ -49,21 +48,48 @@ export const PengajuanManagement = () => {
     }
   };
 
+  // --- REVISI: LOGIKA DETEKSI KONFLIK YANG LEBIH AKURAT ---
+  const getConflictOwner = (currentItem: any) => {
+    // Hanya validasi item yang statusnya masih 'Pending'
+    if (currentItem.status !== 'Pending') return null;
+
+    // Helper untuk membuat objek Date dari string tanggal & jam
+    const toDate = (dateStr: string, timeStr: string) => new Date(`${dateStr}T${timeStr}`);
+
+    const startCurrent = toDate(currentItem.tgl_mulai, currentItem.jam_mulai);
+    const endCurrent = toDate(currentItem.tgl_selesai, currentItem.jam_selesai);
+
+    // Cari jadwal lain yang SUDAH DISETUJUI dan BENTROK
+    const conflict = peminjamanList.find(approved => {
+      // Syarat 1: Status harus Disetujui, Aset Sama, dan Bukan item itu sendiri
+      if (approved.status !== 'Disetujui') return false;
+      if (approved.asset_id !== currentItem.asset_id) return false;
+      if (approved.id === currentItem.id) return false;
+
+      // Syarat 2: Cek Tumpang Tindih Waktu (Overlap Logic)
+      const startApproved = toDate(approved.tgl_mulai, approved.jam_mulai);
+      const endApproved = toDate(approved.tgl_selesai, approved.jam_selesai);
+
+      // Rumus Overlap: (Start A < End B) && (End A > Start B)
+      return startApproved < endCurrent && endApproved > startCurrent;
+    });
+
+    return conflict ? conflict.nama_pemohon : null;
+  };
+
   const handleAction = async (id: string, status: StatusPeminjaman, note?: string) => {
+    // --- REVISI: PENGECEKAN SEBELUM KIRIM KE DATABASE ---
     if (status === 'Disetujui') {
       const item = peminjamanList.find(p => p.id === id);
-      if (item) {
-        const approvedConflict = peminjamanList.filter(b => 
-          b.id !== id && b.status === 'Disetujui' && b.asset_id === item.asset_id &&
-          b.tgl_mulai === item.tgl_mulai && (item.jam_mulai < b.jam_selesai && item.jam_selesai > b.jam_mulai)
-        );
+      const conflictName = item ? getConflictOwner(item) : null;
 
-        if (approvedConflict.length > 0) {
-          toast.error("TIDAK BISA ACC!", { 
-            description: `Jadwal ini sudah resmi dipakai oleh ${approvedConflict[0].nama_pemohon}.` 
-          });
-          return;
-        }
+      if (conflictName) {
+        // Tampilkan Notifikasi Error dan Batalkan Proses
+        toast.error("GAGAL MENYETUJUI!", { 
+          description: `Jadwal ini bentrok dengan ${conflictName} yang sudah disetujui.`,
+          duration: 4000
+        });
+        return; 
       }
     }
     
@@ -109,7 +135,6 @@ export const PengajuanManagement = () => {
               </TabsList>
             </Tabs>
 
-            {/* TOMBOL EXPORT DINAMIS BERDASARKAN FILTER AKTIF */}
             {filterType === 'all' && (
               <Button 
                 variant="outline" 
@@ -123,7 +148,7 @@ export const PengajuanManagement = () => {
                 <FileDown className="w-4 h-4 mr-2" /> Export Semua
               </Button>
             )}
-
+            
             {filterType === 'kendaraan' && (
               <Button 
                 variant="outline" 
@@ -170,63 +195,88 @@ export const PengajuanManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedList.map((item, index) => (
-              <TableRow key={item.id} className={`${item.status === 'Konflik' ? 'bg-red-50/30' : ''} border-slate-50 hover:bg-slate-50/50 transition-all`}>
-                <TableCell className="text-center font-mono text-xs text-slate-300">
-                  {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2 text-[11px] font-black text-slate-600 uppercase tracking-tight">
-                    <Calendar className="w-3 h-3 text-primary" />
-                    {new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </div>
-                </TableCell>
-                <TableCell className="py-4">
-                  <div className="text-[12px] font-black text-primary uppercase mb-1 tracking-tight">{item.nama_pemohon}</div>
-                  <div className="text-[10px] text-slate-400 font-black text-primary uppercase tracking-widest mt-0.5">{item.unit} • NIP: {item.nip || '-'}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-[10px] font-black text-primary uppercase mb-1 tracking-widest">
-                    {getAssetName(item.jenis_asset, item.asset_id)}
-                  </div>
-                  <div className="text-[10px] flex items-center gap-1.5 text-slate-500 font-bold uppercase">
-                    <Clock className="w-3 h-3 text-slate-300"/> {item.tgl_mulai} | {item.jam_mulai} - {item.jam_selesai}
-                  </div>
-                </TableCell>
-                <TableCell className="max-w-[200px]">
-                  <p className="text-[11px] text-slate-600 font-medium italic line-clamp-2 leading-relaxed">"{item.keperluan || '-'}"</p>
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    {item.status === 'Pending' || item.status === 'Konflik' ? (
-                      <div className="flex gap-1.5 bg-white p-1.5 rounded-xl border shadow-sm">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8 text-[9px] font-black px-4 uppercase tracking-widest" onClick={() => handleAction(item.id, 'Disetujui')}>
-                          SETUJU
-                        </Button>
-                        <Button size="sm" variant="destructive" className="h-8 text-[9px] font-black px-4 uppercase tracking-widest" onClick={() => { setSelectedId(item.id); setIsRejectOpen(true); }}>
-                          TOLAK
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <StatusBadge status={item.status} />
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-slate-200 text-slate-400 hover:text-primary transition-all" onClick={() => handleAction(item.id, 'Pending')}>
-                          <Pencil className="w-3.5 h-3.5"/>
-                        </Button>
+            {paginatedList.map((item, index) => {
+              // --- CEK KONFLIK PER BARIS ---
+              const conflictOwner = getConflictOwner(item);
+              const isConflict = !!conflictOwner;
+
+              return (
+                <TableRow key={item.id} className={`${item.status === 'Konflik' ? 'bg-red-50/30' : ''} border-slate-50 hover:bg-slate-50/50 transition-all`}>
+                  <TableCell className="text-center font-mono text-xs text-slate-300">
+                    {String((currentPage - 1) * itemsPerPage + index + 1).padStart(2, '0')}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2 text-[11px] font-black text-slate-600 uppercase tracking-tight">
+                      <Calendar className="w-3 h-3 text-primary" />
+                      {new Date(item.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-4">
+                    <div className="text-[12px] font-black text-primary uppercase mb-1 tracking-tight">{item.nama_pemohon}</div>
+                    <div className="text-[10px] text-slate-400 font-black text-primary uppercase tracking-widest mt-0.5">{item.unit} • NIP: {item.nip || '-'}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-[10px] font-black text-primary uppercase mb-1 tracking-widest">
+                      {getAssetName(item.jenis_asset, item.asset_id)}
+                    </div>
+                    <div className="text-[10px] flex items-center gap-1.5 text-slate-500 font-bold uppercase">
+                      <Clock className="w-3 h-3 text-slate-300"/> {item.tgl_mulai} | {item.jam_mulai} - {item.jam_selesai}
+                    </div>
+
+                    {/* --- VISUALISASI JIKA BENTROK --- */}
+                    {isConflict && (
+                      <div className="mt-2 flex items-center gap-1.5 p-1.5 bg-red-100/80 border border-red-200 rounded-md animate-pulse">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                        <span className="text-[9px] font-black text-red-600 uppercase tracking-tight leading-none">
+                          BENTROK DGN: {conflictOwner}
+                        </span>
                       </div>
                     )}
-                    {item.catatan_admin && (
-                      <div className="w-full max-w-[200px] p-2 bg-blue-50/50 rounded-lg border border-blue-100 flex items-start gap-2 shadow-sm">
-                        <MessageSquare className="w-3 h-3 text-blue-400 mt-1 shrink-0" />
-                        <p className="text-[9px] text-blue-800 leading-tight italic font-medium">
-                          <span className="font-black uppercase text-[8px] not-italic mr-1 text-blue-900 tracking-tighter">CATATAN:</span> {item.catatan_admin}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell className="max-w-[200px]">
+                    <p className="text-[11px] text-slate-600 font-medium italic line-clamp-2 leading-relaxed">"{item.keperluan || '-'}"</p>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      {item.status === 'Pending' || item.status === 'Konflik' ? (
+                        <div className="flex gap-1.5 bg-white p-1.5 rounded-xl border shadow-sm">
+                          <Button 
+                            size="sm" 
+                            // Tombol Berubah Warna jika Bentrok
+                            className={`h-8 text-[9px] font-black px-4 uppercase tracking-widest ${
+                              isConflict 
+                              ? 'bg-yellow-500 hover:bg-red-600 text-white shadow-red-200' 
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`} 
+                            onClick={(  ) => handleAction(item.id, 'Disetujui')}
+                          >
+                            {isConflict ? 'SETUJU' : 'SETUJU'}
+                          </Button>
+                          <Button size="sm" variant="destructive" className="h-8 text-[9px] font-black px-4 uppercase tracking-widest" onClick={() => { setSelectedId(item.id); setIsRejectOpen(true); }}>
+                            TOLAK
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <StatusBadge status={item.status} />
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-slate-200 text-slate-400 hover:text-primary transition-all" onClick={() => handleAction(item.id, 'Pending')}>
+                            <Pencil className="w-3.5 h-3.5"/>
+                          </Button>
+                        </div>
+                      )}
+                      {item.catatan_admin && (
+                        <div className="w-full max-w-[200px] p-2 bg-blue-50/50 rounded-lg border border-blue-100 flex items-start gap-2 shadow-sm">
+                          <MessageSquare className="w-3 h-3 text-blue-400 mt-1 shrink-0" />
+                          <p className="text-[9px] text-blue-800 leading-tight italic font-medium">
+                            <span className="font-black uppercase text-[8px] not-italic mr-1 text-blue-900 tracking-tighter">CATATAN:</span> {item.catatan_admin}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {paginatedList.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-12 font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">
@@ -236,7 +286,7 @@ export const PengajuanManagement = () => {
             )}
           </TableBody>
         </Table>
-
+        
         <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-slate-50/50 border-t gap-4">
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tampilkan:</span>
