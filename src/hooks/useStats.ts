@@ -1,60 +1,59 @@
-import { useMemo } from 'react';
-import { usePeminjaman, type Peminjaman } from '@/hooks/usePeminjaman';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
-const MONTH_NAMES = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-];
+export const useStats = (selectedYear: number, userId?: string) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['stats', selectedYear, userId], 
+    queryFn: async () => {
+      let query = supabase.from('data_peminjaman').select('*');
+      
+      // Perbaikan: Filter statistik jika user bukan admin
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
 
-export interface MonthlyStats {
-  month: string;
-  monthName: string;
-  kendaraan: number;
-  ruangan: number;
-  total: number;
-}
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
-export const useStats = (year: number) => {
-  const { peminjamanList, isLoading } = usePeminjaman(true);
+  const monthlyStats = Array.from({ length: 12 }, (_, i) => ({
+    monthName: new Date(0, i).toLocaleString('id-ID', { month: 'long' }),
+    kendaraan: 0,
+    ruangan: 0,
+    total: 0,
+  }));
 
-  const monthlyStats = useMemo<MonthlyStats[]>(() => {
-    return MONTH_NAMES.map((monthName, index) => {
-      const monthPeminjaman = peminjamanList.filter(p => {
-        const date = new Date(p.created_at);
-        return date.getFullYear() === year && date.getMonth() === index;
-      });
+  let pendingCount = 0;
+  let approvedCount = 0;
+  const yearlyTotals = { total: 0, kendaraan: 0, ruangan: 0 };
 
-      const kendaraan = monthPeminjaman.filter(p => p.jenis_asset === 'kendaraan').length;
-      const ruangan = monthPeminjaman.filter(p => p.jenis_asset === 'ruangan').length;
+  if (data && Array.isArray(data)) {
+    data.forEach((item) => {
+      if (!item.tgl_mulai) return;
+      const date = new Date(item.tgl_mulai);
+      if (date.getFullYear() === selectedYear) {
+        const monthIndex = date.getMonth();
+        const jenis = item.jenis_asset?.toLowerCase();
+        
+        if (jenis === 'kendaraan') {
+          monthlyStats[monthIndex].kendaraan++;
+          yearlyTotals.kendaraan++;
+        } else {
+          monthlyStats[monthIndex].ruangan++;
+          yearlyTotals.ruangan++;
+        }
+        
+        monthlyStats[monthIndex].total++;
+        yearlyTotals.total++;
 
-      return {
-        month: String(index + 1).padStart(2, '0'),
-        monthName,
-        kendaraan,
-        ruangan,
-        total: kendaraan + ruangan,
-      };
+        const status = item.status?.toLowerCase();
+        if (status === 'menunggu' || status === 'pending') pendingCount++;
+        if (status === 'disetujui') approvedCount++;
+      }
     });
-  }, [peminjamanList, year]);
-
-  const yearlyTotals = useMemo(() => {
-    return monthlyStats.reduce(
-      (acc, s) => ({
-        kendaraan: acc.kendaraan + s.kendaraan,
-        ruangan: acc.ruangan + s.ruangan,
-        total: acc.total + s.total,
-      }),
-      { kendaraan: 0, ruangan: 0, total: 0 }
-    );
-  }, [monthlyStats]);
-
-  const pendingCount = useMemo(() => {
-    return peminjamanList.filter(p => p.status === 'Pending').length;
-  }, [peminjamanList]);
-
-  const approvedCount = useMemo(() => {
-    return peminjamanList.filter(p => p.status === 'Disetujui').length;
-  }, [peminjamanList]);
+  }
 
   return { monthlyStats, yearlyTotals, pendingCount, approvedCount, isLoading };
 };

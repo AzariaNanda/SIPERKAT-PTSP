@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Send, Users } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,57 +34,48 @@ export const PeminjamanForm = () => {
     butuh_supir: '' as '' | 'ya' | 'tidak',
   });
 
-  const handleSubmit = () => {
-    // 1. Validasi Dasar
-    if (!formData.nama_pemohon || !formData.nip || !formData.unit || 
-        !formData.asset_id || !formData.tgl_mulai || !formData.jam_mulai || 
-        !formData.tgl_selesai || !formData.jam_selesai || !formData.keperluan) {
+  const handleSubmit = async () => {
+    // 1. Validasi Input Dasar
+    if (!formData.nama_pemohon || !formData.nip || !formData.asset_id || !formData.tgl_mulai || !formData.jam_mulai || !formData.jam_selesai) {
       toast.error('MOHON LENGKAPI SEMUA FIELD');
       return;
     }
 
-    // 2. Validasi NIP (min 18 digit)
-    if (formData.nip.length < 18) {
-      toast.error('NIP MINIMAL 18 DIGIT');
-      return;
-    }
-
-    // 3. Validasi Khusus Ruangan (Jumlah Peserta & Kapasitas)
-    if (formData.jenis_asset === 'ruangan') {
-      if (!formData.jumlah_peserta) {
-        toast.error('MOHON ISI JUMLAH PESERTA RAPAT');
-        return;
-      }
-      
-      // Validasi Kapasitas Ruangan
-      const selectedRuangan = ruanganList.find((r: any) => r.id === formData.asset_id);
-      if (selectedRuangan && parseInt(formData.jumlah_peserta) > selectedRuangan.kapasitas) {
-        toast.error(`KAPASITAS RUANGAN TIDAK MENCUKUPI (Maksimal: ${selectedRuangan.kapasitas} orang)`);
-        return;
-      }
-    }
-
-    // 4. Validasi Khusus Kendaraan (Supir)
-    if (formData.jenis_asset === 'kendaraan' && !formData.butuh_supir) {
-      toast.error('MOHON PILIH APAKAH MEMBUTUHKAN SUPIR');
-      return;
-    }
-
     if (!user?.id) {
-      toast.error('SESI TIDAK VALID, SILAKAN LOGIN ULANG');
+      toast.error('SESI TIDAK VALID');
       return;
     }
 
-    // 5. Cek Konflik
+    // 2. DETEKSI BENTROK JADWAL (Logika Global)
     const conflicts = checkScheduleConflict({
       asset_id: formData.asset_id,
-      jenis_asset: formData.jenis_asset,
       tgl_mulai: formData.tgl_mulai,
-      tgl_selesai: formData.tgl_selesai,
       jam_mulai: formData.jam_mulai,
       jam_selesai: formData.jam_selesai,
     });
 
+    // 🔴 CASE 2: BENTROK DENGAN STATUS APPROVED (BLOCK!)
+    const approvedConflict = conflicts.find(c => c.status === 'Disetujui');
+    if (approvedConflict) {
+      toast.error(`JADWAL BENTROK DENGAN ${approvedConflict.nama_pemohon.toUpperCase()}`, {
+        description: `Sudah disetujui untuk jam ${approvedConflict.jam_mulai} - ${approvedConflict.jam_selesai}`,
+        duration: 5000,
+        style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171' }
+      });
+      return; // STOP SUBMIT
+    }
+
+    // 🟡 CASE 1: BENTROK DENGAN STATUS PENDING (WARNING)
+    const pendingConflict = conflicts.find(c => c.status === 'Pending' || c.status === 'Menunggu');
+    if (pendingConflict) {
+      toast.warning('JADWAL BENTROK DENGAN PENGAJUAN LAIN', {
+        description: "Ada pengajuan lain yang berstatus PENDING di jam ini. Anda tetap bisa lanjut.",
+        duration: 5000,
+        style: { background: '#fef9c3', color: '#854d0e', border: '1px solid #facc15' }
+      });
+    }
+
+    // 3. PROSES SUBMIT
     const newPeminjaman: PeminjamanInsert = {
       user_id: user.id,
       email: user.email || '',
@@ -99,28 +90,17 @@ export const PeminjamanForm = () => {
       jam_selesai: formData.jam_selesai,
       keperluan: formData.keperluan,
       jumlah_peserta: formData.jenis_asset === 'ruangan' ? parseInt(formData.jumlah_peserta) : null,
-      status: conflicts.length > 0 ? 'Konflik' : 'Pending',
+      status: 'Pending',
       butuh_supir: formData.jenis_asset === 'kendaraan' ? formData.butuh_supir : null,
     };
-
-    if (conflicts.length > 0) {
-      toast.warning('PENGAJUAN TERDETEKSI KONFLIK JADWAL!');
-    }
 
     addPeminjaman.mutate(newPeminjaman, {
       onSuccess: () => {
         setFormData({
-          jenis_asset: 'kendaraan',
-          nama_pemohon: '',
-          nip: '',
-          unit: '',
-          jumlah_peserta: '',
+          ...formData,
           asset_id: '',
-          tgl_mulai: '',
-          jam_mulai: '',
-          tgl_selesai: '',
-          jam_selesai: '',
           keperluan: '',
+          jumlah_peserta: '',
           butuh_supir: '',
         });
         toast.success('PENGAJUAN BERHASIL DIKIRIM');
@@ -198,17 +178,16 @@ export const PeminjamanForm = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="font-semibold uppercase text-xs text-slate-500">NIP (NOMOR INDUK PEGAWAI)</Label>
+              <Label className="font-semibold uppercase text-xs text-slate-500">NIP</Label>
               <Input
                 value={formData.nip}
                 maxLength={18}
                 onChange={(e) => setFormData({ ...formData, nip: e.target.value.replace(/\D/g, '') })}
-                placeholder="MASUKAN 18 DIGIT ANGKA"
+                placeholder="18 DIGIT ANGKA"
                 className="bg-slate-50"
               />
             </div>
 
-            {/* UNIT BIDANG: Lebar penuh jika jumlah peserta tidak ada */}
             <div className={formData.jenis_asset === 'ruangan' ? "space-y-2" : "space-y-2 md:col-span-2"}>
               <Label className="font-semibold uppercase text-xs text-slate-500">Unit / Bidang</Label>
               <Input
@@ -219,7 +198,6 @@ export const PeminjamanForm = () => {
               />
             </div>
 
-            {/* JUMLAH PESERTA: Hanya tampil jika Ruangan dipilih */}
             {formData.jenis_asset === 'ruangan' && (
               <div className="space-y-2">
                 <Label className="font-semibold uppercase text-xs text-slate-500">Jumlah Peserta</Label>
@@ -231,14 +209,13 @@ export const PeminjamanForm = () => {
                     value={formData.jumlah_peserta}
                     onChange={(e) => setFormData({ ...formData, jumlah_peserta: e.target.value.replace(/\D/g, '') })}
                     placeholder="0"
-                    className="bg-slate-50 pl-10 border-primary/20"
+                    className="bg-slate-50 pl-10"
                   />
                 </div>
               </div>
             )}
           </div>
 
-          {/* GRID WAKTU */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-100/50 p-4 rounded-xl border border-slate-200">
             <div className="space-y-1"><Label className="text-[10px] font-bold uppercase">Tgl Mulai</Label><Input type="date" value={formData.tgl_mulai} onChange={(e) => setFormData({ ...formData, tgl_mulai: e.target.value })} className="h-9 bg-white" /></div>
             <div className="space-y-1"><Label className="text-[10px] font-bold uppercase">Jam Mulai</Label><Input type="time" value={formData.jam_mulai} onChange={(e) => setFormData({ ...formData, jam_mulai: e.target.value })} className="h-9 bg-white" /></div>
@@ -251,7 +228,7 @@ export const PeminjamanForm = () => {
             <Textarea
               value={formData.keperluan}
               onChange={(e) => setFormData({ ...formData, keperluan: e.target.value })}
-              placeholder="JELASKAN DETAIL KEPERLUAN..."
+              placeholder="DETAIL KEPERLUAN..."
               rows={3}
               className="bg-slate-50"
             />
@@ -259,7 +236,7 @@ export const PeminjamanForm = () => {
 
           {formData.jenis_asset === 'kendaraan' && (
             <div className="space-y-2">
-              <Label className="font-semibold uppercase text-xs text-slate-500 text-center block">Apakah membutuhkan supir?</Label>
+              <Label className="font-semibold uppercase text-xs text-slate-500 text-center block">Butuh supir?</Label>
               <div className="flex gap-3 mt-2">
                 <Button type="button" variant={formData.butuh_supir === 'ya' ? 'default' : 'outline'} className="flex-1 font-bold" onClick={() => setFormData({ ...formData, butuh_supir: 'ya' })}>IYA</Button>
                 <Button type="button" variant={formData.butuh_supir === 'tidak' ? 'default' : 'outline'} className="flex-1 font-bold" onClick={() => setFormData({ ...formData, butuh_supir: 'tidak' })}>TIDAK</Button>
@@ -267,7 +244,7 @@ export const PeminjamanForm = () => {
             </div>
           )}
 
-          <Button onClick={handleSubmit} className="w-full h-12nt-black uppercase tracking-widest shadow-lg shadow-primary/20" disabled={addPeminjaman.isPending}>
+          <Button onClick={handleSubmit} className="w-full h-12 font-black uppercase tracking-widest" disabled={addPeminjaman.isPending}>
             {addPeminjaman.isPending ? 'MENGIRIM...' : 'KIRIM PENGAJUAN'}
           </Button>
         </CardContent>

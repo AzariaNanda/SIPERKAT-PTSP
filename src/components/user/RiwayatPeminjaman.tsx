@@ -5,9 +5,15 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { usePeminjaman } from '@/hooks/usePeminjaman';
 import { useKendaraan } from '@/hooks/useKendaraan';
 import { useRuangan } from '@/hooks/useRuangan';
+import { useAuth } from '@/contexts/AuthContext'; // Tambahkan import auth
 
 export const RiwayatPeminjaman = () => {
-  const { peminjamanList, isLoading } = usePeminjaman();
+  const { user } = useAuth(); // Ambil user yang sedang login
+  
+  // PERBAIKAN: Kirim user?.id ke hook agar data difilter (Hanya milik kamu)
+  // Di sini adalah tempat "Personalisasi" (Biar riwayat gak nyampur).
+  const { peminjamanList, isLoading } = usePeminjaman(false, user?.id);
+  
   const { kendaraanList } = useKendaraan();
   const { ruanganList } = useRuangan();
 
