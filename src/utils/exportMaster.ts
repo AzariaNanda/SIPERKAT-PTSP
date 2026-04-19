@@ -3,8 +3,8 @@ import * as XLSX from 'xlsx';
 export const exportMasterKendaraan = (data: any[]) => {
   const dataToExport = data.map(item => ({
     'NAMA KENDARAAN': item.nama_kendaraan.toUpperCase(),
-    'NOMOR POLISI': item.no_polisi.toUpperCase(),
-    'PENEMPATAN': item.penempatan.toUpperCase(),
+    'NOMOR POLISI': item.plat_nomor.toUpperCase(),
+    'PENEMPATAN': item.deskripsi.toUpperCase(),
     'FOTO URL': item.foto_url || '-'
   }));
 

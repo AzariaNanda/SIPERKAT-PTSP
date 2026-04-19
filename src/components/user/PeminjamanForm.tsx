@@ -158,7 +158,7 @@ export const PeminjamanForm = () => {
                   {availableAssets.map((asset: any) => (
                     <SelectItem key={asset.id} value={asset.id}>
                       {formData.jenis_asset === 'kendaraan' 
-                        ? `${asset.nama_kendaraan} (${asset.no_polisi})`
+                        ? `${asset.nama_kendaraan} (${asset.plat_nomor})`
                         : asset.nama_ruangan
                       }
                     </SelectItem>

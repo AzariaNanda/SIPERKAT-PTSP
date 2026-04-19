@@ -21,15 +21,15 @@ export const KendaraanManagement = () => {
   
   const [formData, setFormData] = useState({
     nama_kendaraan: '',
-    no_polisi: '',
-    penempatan: '',
+    plat_nomor: '',
+    deskripsi: '',
     foto_url: '',
   });
 
   // Filter pencarian untuk menjaga konsistensi UI modern
   const filteredData = kendaraanList.filter(k => 
     k.nama_kendaraan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    k.no_polisi.toLowerCase().includes(searchTerm.toLowerCase())
+    k.plat_nomor.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleExport = () => {
@@ -43,7 +43,7 @@ export const KendaraanManagement = () => {
 
   const openAddModal = () => {
     setModalMode('add');
-    setFormData({ nama_kendaraan: '', no_polisi: '', penempatan: '', foto_url: '' });
+    setFormData({ nama_kendaraan: '', plat_nomor: '', deskripsi: '', foto_url: '' });
     setShowModal(true);
   };
 
@@ -52,8 +52,8 @@ export const KendaraanManagement = () => {
     setSelectedItem(item);
     setFormData({
       nama_kendaraan: item.nama_kendaraan,
-      no_polisi: item.no_polisi,
-      penempatan: item.penempatan,
+      plat_nomor: item.plat_nomor,
+      deskripsi: item.deskripsi,
       foto_url: item.foto_url || '',
     });
     setShowModal(true);
@@ -85,7 +85,7 @@ export const KendaraanManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.nama_kendaraan || !formData.no_polisi || !formData.penempatan) {
+    if (!formData.nama_kendaraan || !formData.plat_nomor || !formData.deskripsi) {
       toast.error('Mohon lengkapi semua field');
       return;
     }
@@ -93,8 +93,8 @@ export const KendaraanManagement = () => {
     if (modalMode === 'add') {
       const newData: KendaraanInsert = {
         nama_kendaraan: formData.nama_kendaraan,
-        no_polisi: formData.no_polisi,
-        penempatan: formData.penempatan,
+        plat_nomor: formData.plat_nomor,
+        deskripsi: formData.deskripsi,
         foto_url: formData.foto_url || null,
       };
       addKendaraan.mutate(newData);
@@ -102,8 +102,8 @@ export const KendaraanManagement = () => {
       updateKendaraan.mutate({
         id: selectedItem.id,
         nama_kendaraan: formData.nama_kendaraan,
-        no_polisi: formData.no_polisi,
-        penempatan: formData.penempatan,
+        plat_nomor: formData.plat_nomor,
+        deskripsi: formData.deskripsi,
         foto_url: formData.foto_url || null,
       });
     }
@@ -197,12 +197,12 @@ export const KendaraanManagement = () => {
                 </TableCell>
                 <TableCell>
                   <div className="inline-flex px-3 py-1 bg-slate-100 rounded-lg font-black text-[11px] text-slate-700 border border-slate-200 uppercase">
-                    {item.no_polisi}
+                    {item.plat_nomor}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="text-[10px] font-black text-primary uppercase tracking-widest">
-                    {item.penempatan}
+                    {item.deskripsi}
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
@@ -258,8 +258,8 @@ export const KendaraanManagement = () => {
             <div className="space-y-2">
               <Label className="font-black text-[10px] uppercase text-slate-500 tracking-widest">No. Polisi</Label>
               <Input
-                value={formData.no_polisi}
-                onChange={(e) => setFormData({ ...formData, no_polisi: e.target.value })}
+                value={formData.plat_nomor}
+                onChange={(e) => setFormData({ ...formData, plat_nomor: e.target.value })}
                 placeholder="CONTOH: R 1234 AB"
                 className="bg-slate-50 border-2 border-slate-200 font-black text-sm rounded-xl h-11 focus:ring-primary"
               />
@@ -267,8 +267,8 @@ export const KendaraanManagement = () => {
             <div className="space-y-2">
               <Label className="font-black text-[10px] uppercase text-slate-500 tracking-widest">Penempatan</Label>
               <Input
-                value={formData.penempatan}
-                onChange={(e) => setFormData({ ...formData, penempatan: e.target.value })}
+                value={formData.deskripsi}
+                onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
                 placeholder="CONTOH: KANTOR UTAMA"
                 className="bg-slate-50 border-2 border-slate-200 font-black text-sm rounded-xl h-11 focus:ring-primary"
               />

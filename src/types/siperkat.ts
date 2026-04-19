@@ -1,8 +1,8 @@
 export interface Kendaraan {
   id: number;
   nama_kendaraan: string;
-  no_polisi: string;
-  penempatan: string;
+  plat_nomor: string;
+  deskripsi: string;
   foto_url: string;
 }
 

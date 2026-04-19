@@ -20,7 +20,7 @@ export const RiwayatPeminjaman = () => {
   const getAssetName = (jenis_asset: string, asset_id: string) => {
     if (jenis_asset === 'kendaraan') {
       const k = kendaraanList.find(x => x.id === asset_id);
-      return k ? `${k.nama_kendaraan} (${k.no_polisi})` : 'Unknown';
+      return k ? `${k.nama_kendaraan} (${k.plat_nomor})` : 'Unknown';
     } else {
       const r = ruanganList.find(x => x.id === asset_id);
       return r ? r.nama_ruangan : 'Unknown';

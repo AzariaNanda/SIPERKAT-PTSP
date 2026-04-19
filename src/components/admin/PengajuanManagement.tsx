@@ -40,7 +40,7 @@ export const PengajuanManagement = () => {
       const k = kendaraanList.find(x => x.id === asset_id);
       if (!k) return 'Aset dihapus';
       const nama = k.nama_kendaraan || 'Tanpa Nama';
-      const plat = k.no_polisi || '-';
+      const plat = k.plat_nomor || '-';
       return `${nama} (${plat})`;
     } else {
       const r = ruanganList.find(x => x.id === asset_id);

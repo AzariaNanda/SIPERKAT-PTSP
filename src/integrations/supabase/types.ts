@@ -89,8 +89,8 @@ export type Database = {
           foto_url: string | null
           id: string
           nama_kendaraan: string
-          no_polisi: string
-          penempatan: string
+          plat_nomor: string
+          deskripsi: string
           updated_at: string
         }
         Insert: {
@@ -98,8 +98,8 @@ export type Database = {
           foto_url?: string | null
           id?: string
           nama_kendaraan: string
-          no_polisi: string
-          penempatan: string
+          plat_nomor: string
+          deskripsi: string
           updated_at?: string
         }
         Update: {
@@ -107,8 +107,8 @@ export type Database = {
           foto_url?: string | null
           id?: string
           nama_kendaraan?: string
-          no_polisi?: string
-          penempatan?: string
+          plat_nomor?: string
+          deskripsi?: string
           updated_at?: string
         }
         Relationships: []

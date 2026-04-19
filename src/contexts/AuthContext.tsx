@@ -160,20 +160,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     setLoading(true);
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setRole(null);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      toast.error('Logout gagal. Silakan coba lagi.');
+    } else {
+      setUser(null);
+      setSession(null);
+      setRole(null);
+      toast.success('Logout berhasil.');
+    }
+
     setLoading(false);
-    toast.success('Logout berhasil.');
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const cleanEmail = email.toLowerCase().trim();
+      const isAllowed = await verifyWhitelist(cleanEmail);
+      if (!isAllowed) return { error: "Email tidak terdaftar (Whitelist)." };
+
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (err) {
+      return { error: "Terjadi kesalahan saat mengirim email reset." };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (err) {
+      return { error: "Terjadi kesalahan saat memperbarui password." };
+    }
   };
 
   return (
     <AuthContext.Provider value={{ 
       user, session, role, isAdmin: role === 'admin', 
       loading, signIn, signUp, signOut, 
-      resetPassword: async () => ({ error: null }), 
-      updatePassword: async () => ({ error: null }) 
+      resetPassword,
+      updatePassword
     }}>
       {children}
     </AuthContext.Provider>
