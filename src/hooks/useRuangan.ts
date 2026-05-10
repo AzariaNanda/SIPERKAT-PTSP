@@ -17,10 +17,11 @@ export const useRuangan = () => {
         .from('master_ruangan')
         .select('*')
         .order('nama_ruangan');
-      
+
       if (error) throw error;
       return data as Ruangan[];
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const addRuangan = useMutation({
@@ -30,7 +31,7 @@ export const useRuangan = () => {
         .insert(newRuangan)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -51,7 +52,7 @@ export const useRuangan = () => {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -70,7 +71,7 @@ export const useRuangan = () => {
         .from('master_ruangan')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {

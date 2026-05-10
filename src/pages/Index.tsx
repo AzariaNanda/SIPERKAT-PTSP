@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  LayoutDashboard, ClipboardList, Car, Home, Send, History, 
+import {
+  LayoutDashboard, ClipboardList, Car, Home, Send, History,
   Mail, Lock, LogIn, UserPlus, DoorOpen, CheckCircle2, Shield, Building2,
-  Users 
+  Users
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -12,15 +12,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Navbar } from '@/components/layout/Navbar';
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton';
-import { Dashboard } from '@/components/dashboard/Dashboard';
-import { KendaraanManagement } from '@/components/admin/KendaraanManagement';
-import { RuanganManagement } from '@/components/admin/RuanganManagement';
-import { PengajuanManagement } from '@/components/admin/PengajuanManagement';
-import { PegawaiManagement } from '@/components/admin/PegawaiManagement';
-import { PeminjamanForm } from '@/components/user/PeminjamanForm';
-import { RiwayatPeminjaman } from '@/components/user/RiwayatPeminjaman';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+const Dashboard = lazy(() => import('@/components/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
+const KendaraanManagement = lazy(() => import('@/components/admin/KendaraanManagement').then(m => ({ default: m.KendaraanManagement })));
+const RuanganManagement = lazy(() => import('@/components/admin/RuanganManagement').then(m => ({ default: m.RuanganManagement })));
+const PengajuanManagement = lazy(() => import('@/components/admin/PengajuanManagement').then(m => ({ default: m.PengajuanManagement })));
+const PegawaiManagement = lazy(() => import('@/components/admin/PegawaiManagement').then(m => ({ default: m.PegawaiManagement })));
+const PeminjamanForm = lazy(() => import('@/components/user/PeminjamanForm').then(m => ({ default: m.PeminjamanForm })));
+const RiwayatPeminjaman = lazy(() => import('@/components/user/RiwayatPeminjaman').then(m => ({ default: m.RiwayatPeminjaman })));
+
 
 const features = [
   { icon: Car, title: "Peminjaman Kendaraan", description: "Booking kendaraan dinas dengan mudah" },
@@ -44,7 +46,6 @@ const LoginScreen = () => {
 
     setIsSubmitting(true);
     try {
-      // Logika login sekarang langsung bergantung pada hasil signIn.
       const { error } = await signIn(email, password);
       if (error) {
         toast.error("LOGIN GAGAL", { description: error });
@@ -52,7 +53,6 @@ const LoginScreen = () => {
         toast.success("SELAMAT DATANG", { description: "Berhasil masuk ke sistem SIPERKAT." });
       }
     } finally {
-      // Pastikan tombol tidak stuck "Memproses..." meskipun ada error tak ter-handle.
       setIsSubmitting(false);
     }
   };
@@ -100,19 +100,19 @@ const LoginScreen = () => {
                 <h1 className="text-3xl font-bold text-primary mb-1 tracking-tight uppercase">SIPERKAT</h1>
                 <p className="text-slate-600 font-semibold text-sm uppercase tracking-wide">Sistem Peminjaman Terpadu</p>
               </div>
-              
+
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-bold text-xs uppercase text-slate-500 tracking-wider">Email Pegawai</Label>
                   <div className="relative mt-1">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="nama@email.com" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                      className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm" 
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="nama@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm"
                     />
                   </div>
                 </div>
@@ -120,29 +120,29 @@ const LoginScreen = () => {
                   <Label htmlFor="password" className="font-bold text-xs uppercase text-slate-500 tracking-wider">Password</Label>
                   <div className="relative mt-1">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input 
-                      id="password" 
-                      type="password" 
-                      placeholder="••••••••" 
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
-                      className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm" 
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 h-12 bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm"
                     />
                   </div>
                 </div>
 
                 <div className="pt-2">
-                  <Button 
-                    type="submit" 
-                    disabled={loading || isSubmitting} 
+                  <Button
+                    type="submit"
+                    disabled={loading || isSubmitting}
                     className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-all uppercase"
                   >
                     {isSubmitting ? "Memproses..." : <><LogIn className="w-5 h-5 mr-2" />Masuk Sistem</>}
                   </Button>
-                  
+
                   <div className="flex justify-center mt-4">
-                    <Link 
-                      to="/forgot-password" 
+                    <Link
+                      to="/forgot-password"
                       className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 hover:text-primary transition-all underline-offset-4 hover:underline"
                     >
                       Lupa password?
@@ -150,7 +150,7 @@ const LoginScreen = () => {
                   </div>
                 </div>
               </form>
-              
+
               <div className="mt-10 text-center pt-8 border-t border-slate-100">
                 <p className="text-slate-400 text-xs mb-3 font-medium tracking-wide uppercase">Belum memiliki akses?</p>
                 <Link to="/register">
@@ -167,13 +167,18 @@ const LoginScreen = () => {
   );
 };
 
+const LazyFallback = () => (
+  <div className="flex items-center justify-center py-16 text-muted-foreground text-sm animate-pulse">
+    Memuat...
+  </div>
+);
+
 const MainApp = () => {
   const { user, isAdmin, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  
+
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-primary animate-pulse tracking-widest uppercase">SIPERKAT</div>;
 
-  // Cek apakah user yang login adalah Admin Utama (Otoritas Tunggal)
   const isMainAdmin = user?.email === 'subbagumpeg.dpmptspbms@gmail.com';
 
   return (
@@ -181,43 +186,45 @@ const MainApp = () => {
       <Navbar />
       <WhatsAppButton />
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {isAdmin ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex justify-between items-center mb-6">
-              <TabsList>
+        <Suspense fallback={<LazyFallback />}>
+          {isAdmin ? (
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <div className="flex justify-between items-center mb-6">
+                <TabsList>
+                  <TabsTrigger value="dashboard" className="gap-2 font-black text-xs uppercase"><LayoutDashboard className="w-4 h-4" />Dashboard</TabsTrigger>
+                  <TabsTrigger value="pengajuan" className="gap-2 font-black text-xs uppercase"><ClipboardList className="w-4 h-4" />Pengajuan</TabsTrigger>
+                  <TabsTrigger value="kendaraan" className="gap-2 font-black text-xs uppercase"><Car className="w-4 h-4" />Kendaraan</TabsTrigger>
+                  <TabsTrigger value="ruangan" className="gap-2 font-black text-xs uppercase"><Home className="w-4 h-4" />Ruangan</TabsTrigger>
+                  {/* TAB PEGAWAI: Hanya tampil untuk Admin Utama */}
+                  {isMainAdmin && (
+                    <TabsTrigger value="pegawai" className="gap-2 font-black text-xs uppercase text-primary">
+                      <Users className="w-4 h-4" /> Pegawai
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </div>
+              <TabsContent value="dashboard"><Dashboard isAdmin={true} /></TabsContent>
+              <TabsContent value="pengajuan"><PengajuanManagement /></TabsContent>
+              <TabsContent value="kendaraan"><KendaraanManagement /></TabsContent>
+              <TabsContent value="ruangan"><RuanganManagement /></TabsContent>
+              {/* KONTEN PEGAWAI: Hanya aktif untuk Admin Utama */}
+              {isMainAdmin && (
+                <TabsContent value="pegawai"><PegawaiManagement /></TabsContent>
+              )}
+            </Tabs>
+          ) : (
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="mb-6">
                 <TabsTrigger value="dashboard" className="gap-2 font-black text-xs uppercase"><LayoutDashboard className="w-4 h-4" />Dashboard</TabsTrigger>
-                <TabsTrigger value="pengajuan" className="gap-2 font-black text-xs uppercase"><ClipboardList className="w-4 h-4" />Pengajuan</TabsTrigger>
-                <TabsTrigger value="kendaraan" className="gap-2 font-black text-xs uppercase"><Car className="w-4 h-4" />Kendaraan</TabsTrigger>
-                <TabsTrigger value="ruangan" className="gap-2 font-black text-xs uppercase"><Home className="w-4 h-4" />Ruangan</TabsTrigger>
-                {/* TAB PEGAWAI: Hanya tampil untuk Admin Utama */}
-                {isMainAdmin && (
-                  <TabsTrigger value="pegawai" className="gap-2 font-black text-xs uppercase text-primary">
-                    <Users className="w-4 h-4" /> Pegawai
-                  </TabsTrigger>
-                )}
+                <TabsTrigger value="ajukan" className="gap-2 font-black text-xs uppercase"><Send className="w-4 h-4" />Ajukan</TabsTrigger>
+                <TabsTrigger value="riwayat" className="gap-2 font-black text-xs uppercase"><History className="w-4 h-4" />Riwayat</TabsTrigger>
               </TabsList>
-            </div>
-            <TabsContent value="dashboard"><Dashboard isAdmin={true} /></TabsContent>
-            <TabsContent value="pengajuan"><PengajuanManagement /></TabsContent>
-            <TabsContent value="kendaraan"><KendaraanManagement /></TabsContent>
-            <TabsContent value="ruangan"><RuanganManagement /></TabsContent>
-            {/* KONTEN PEGAWAI: Hanya aktif untuk Admin Utama */}
-            {isMainAdmin && (
-              <TabsContent value="pegawai"><PegawaiManagement /></TabsContent>
-            )}
-          </Tabs>
-        ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="dashboard" className="gap-2 font-black text-xs uppercase"><LayoutDashboard className="w-4 h-4" />Dashboard</TabsTrigger>
-              <TabsTrigger value="ajukan" className="gap-2 font-black text-xs uppercase"><Send className="w-4 h-4" />Ajukan</TabsTrigger>
-              <TabsTrigger value="riwayat" className="gap-2 font-black text-xs uppercase"><History className="w-4 h-4" />Riwayat</TabsTrigger>
-            </TabsList>
-            <TabsContent value="dashboard"><Dashboard isAdmin={false} /></TabsContent>
-            <TabsContent value="ajukan"><PeminjamanForm /></TabsContent>
-            <TabsContent value="riwayat"><RiwayatPeminjaman /></TabsContent>
-          </Tabs>
-        )}
+              <TabsContent value="dashboard"><Dashboard isAdmin={false} /></TabsContent>
+              <TabsContent value="ajukan"><PeminjamanForm /></TabsContent>
+              <TabsContent value="riwayat"><RiwayatPeminjaman /></TabsContent>
+            </Tabs>
+          )}
+        </Suspense>
       </main>
     </div>
   );

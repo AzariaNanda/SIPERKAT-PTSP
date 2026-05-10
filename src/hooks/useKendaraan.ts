@@ -17,10 +17,11 @@ export const useKendaraan = () => {
         .from('master_kendaraan')
         .select('*')
         .order('nama_kendaraan');
-      
+
       if (error) throw error;
       return data as Kendaraan[];
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const addKendaraan = useMutation({
@@ -30,7 +31,7 @@ export const useKendaraan = () => {
         .insert(newKendaraan)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -51,7 +52,7 @@ export const useKendaraan = () => {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -70,7 +71,7 @@ export const useKendaraan = () => {
         .from('master_kendaraan')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {

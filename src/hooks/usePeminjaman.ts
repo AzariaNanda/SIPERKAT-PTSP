@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Tables, TablesInsert, TablesUpdate, Enums } from '@/integrations/supabase/types';
@@ -34,23 +34,26 @@ export const usePeminjaman = (isAdmin: boolean = false, userId?: string) => {
       if (error) throw error;
       return data as Peminjaman[];
     },
+    staleTime: 30 * 1000,
   });
 
   // Sinkronisasi Real-time menggunakan Postgres Changes
+  const channelNameRef = useRef(`peminjaman-sync-${Math.random().toString(36).slice(2)}`);
+
   useEffect(() => {
-    const channel = supabase.channel('peminjaman-sync')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'data_peminjaman' 
+    const channel = supabase.channel(channelNameRef.current)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'data_peminjaman'
       }, () => {
         // Invalidate semua query peminjaman agar data selalu segar di semua komponen
         queryClient.invalidateQueries({ queryKey: ['peminjaman'] });
       })
       .subscribe();
-    
-    return () => { 
-      supabase.removeChannel(channel); 
+
+    return () => {
+      supabase.removeChannel(channel);
     };
   }, [queryClient]);
 
@@ -59,7 +62,7 @@ export const usePeminjaman = (isAdmin: boolean = false, userId?: string) => {
     return peminjamanList.filter(b => {
       // 1. Abaikan pengajuan yang sudah ditolak atau ID yang sama saat editing
       if (b.status === 'Ditolak' || b.id === newBooking.id) return false;
-      
+
       // 2. Pastikan aset dan tanggalnya sama persis
       if (b.asset_id !== newBooking.asset_id || b.tgl_mulai !== newBooking.tgl_mulai) return false;
 
@@ -89,7 +92,7 @@ export const usePeminjaman = (isAdmin: boolean = false, userId?: string) => {
         .insert(payload)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -106,7 +109,7 @@ export const usePeminjaman = (isAdmin: boolean = false, userId?: string) => {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -117,12 +120,12 @@ export const usePeminjaman = (isAdmin: boolean = false, userId?: string) => {
     },
   });
 
-  return { 
-    peminjamanList, 
-    isLoading, 
-    addPeminjaman, 
-    updateStatus, 
-    checkScheduleConflict, 
-    refetch 
+  return {
+    peminjamanList,
+    isLoading,
+    addPeminjaman,
+    updateStatus,
+    checkScheduleConflict,
+    refetch
   };
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, Pencil, Trash2, Car, Upload, Search, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,8 @@ export const KendaraanManagement = () => {
   const [selectedItem, setSelectedItem] = useState<Kendaraan | null>(null);
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     nama_kendaraan: '',
     plat_nomor: '',
@@ -26,8 +27,7 @@ export const KendaraanManagement = () => {
     foto_url: '',
   });
 
-  // Filter pencarian untuk menjaga konsistensi UI modern
-  const filteredData = kendaraanList.filter(k => 
+  const filteredData = kendaraanList.filter(k =>
     k.nama_kendaraan.toLowerCase().includes(searchTerm.toLowerCase()) ||
     k.plat_nomor.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -63,25 +63,59 @@ export const KendaraanManagement = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ukuran file terlalu besar. Maksimal 5MB.');
+      resetFileInput();
+      return;
+    }
+
     setUploading(true);
     const fileExt = file.name.split('.').pop();
     const fileName = `kendaraan_${Date.now()}.${fileExt}`;
     const filePath = `kendaraan/${fileName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('assets')
-      .upload(filePath, file);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Sesi login tidak aktif. Silakan login ulang.');
+      }
 
-    if (uploadError) {
-      toast.error('Gagal mengupload foto: ' + uploadError.message);
+      const uploadPromise = supabase.storage
+        .from('assets')
+        .upload(filePath, file);
+
+      const timeoutPromise = new Promise<any>((_, reject) =>
+        setTimeout(() => reject(new Error('Upload timeout - terlalu lama')), 15000)
+      );
+
+      const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast.error('Gagal mengupload foto: ' + uploadError.message);
+        resetFileInput();
+        return;
+      }
+
+      const { data } = supabase.storage.from('assets').getPublicUrl(filePath);
+      setFormData(prev => ({ ...prev, foto_url: data.publicUrl }));
+      toast.success('Foto berhasil diupload');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Kesalahan tidak diketahui';
+      console.error('Upload failed:', message);
+      toast.error('Gagal mengupload foto: ' + message);
+    } finally {
       setUploading(false);
-      return;
+      resetFileInput();
     }
+  };
 
-    const { data } = supabase.storage.from('assets').getPublicUrl(filePath);
-    setFormData(prev => ({ ...prev, foto_url: data.publicUrl }));
-    setUploading(false);
-    toast.success('Foto berhasil diupload');
+  const resetFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.type = 'text';
+      fileInputRef.current.type = 'file';
+    }
   };
 
   const handleSave = async () => {
@@ -134,20 +168,19 @@ export const KendaraanManagement = () => {
             </div>
             Manajemen Kendaraan
           </CardTitle>
-          
+
           <div className="flex items-center gap-3 w-full lg:w-auto">
             <div className="relative flex-1 lg:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input 
-                placeholder="CARI UNIT..." 
+              <Input
+                placeholder="CARI UNIT..."
                 className="pl-10 font-black text-[10px] uppercase tracking-widest bg-white border-2 focus:ring-primary h-11 rounded-xl"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            {/* Tombol Export Kendaraan */}
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleExport}
               className="font-black text-[10px] uppercase tracking-widest h-11 px-6 rounded-xl border-2 hover:bg-slate-100 transition-all shadow-sm"
             >
@@ -176,8 +209,8 @@ export const KendaraanManagement = () => {
               <TableRow key={item.id} className="border-slate-50 hover:bg-slate-50/50 transition-all">
                 <TableCell className="px-6 py-4">
                   {item.foto_url ? (
-                    <img 
-                      src={item.foto_url} 
+                    <img
+                      src={item.foto_url}
                       alt={item.nama_kendaraan}
                       className="w-16 h-12 object-cover rounded-lg shadow-sm border border-slate-200"
                     />
@@ -207,17 +240,17 @@ export const KendaraanManagement = () => {
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex justify-center gap-1.5">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() => openEditModal(item)}
                       className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-primary transition-all shadow-sm"
                     >
-                      <Pencil className="w-4 h-4"/>
+                      <Pencil className="w-4 h-4" />
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() => handleDelete(item.id)}
                       className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-destructive transition-all shadow-sm"
                     >
@@ -277,9 +310,9 @@ export const KendaraanManagement = () => {
               <Label className="font-black text-[10px] uppercase text-slate-500 tracking-widest">Foto Kendaraan</Label>
               <div className="flex items-center gap-4 mt-2 p-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl">
                 {formData.foto_url && (
-                  <img 
-                    src={formData.foto_url} 
-                    alt="Preview" 
+                  <img
+                    src={formData.foto_url}
+                    alt="Preview"
                     className="w-20 h-14 object-cover rounded-lg shadow-md border border-white"
                   />
                 )}
@@ -289,6 +322,7 @@ export const KendaraanManagement = () => {
                     <span>{uploading ? 'UPLOADING...' : 'UPLOAD FOTO'}</span>
                   </div>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleFileUpload}
@@ -303,12 +337,12 @@ export const KendaraanManagement = () => {
             <Button variant="ghost" onClick={() => setShowModal(false)} className="font-black text-xs uppercase tracking-tighter text-slate-500">
               BATAL
             </Button>
-            <Button 
-              onClick={handleSave} 
-              disabled={addKendaraan.isPending || updateKendaraan.isPending}
+            <Button
+              onClick={handleSave}
+              disabled={uploading || addKendaraan.isPending || updateKendaraan.isPending}
               className="font-black text-xs uppercase tracking-tighter shadow-xl shadow-primary/20 h-11 px-8 rounded-xl"
             >
-              {addKendaraan.isPending || updateKendaraan.isPending ? 'MENYIMPAN...' : 'SIMPAN DATA'}
+              {uploading ? 'MENGUNGGAH...' : addKendaraan.isPending || updateKendaraan.isPending ? 'MENYIMPAN...' : 'SIMPAN DATA'}
             </Button>
           </DialogFooter>
         </DialogContent>

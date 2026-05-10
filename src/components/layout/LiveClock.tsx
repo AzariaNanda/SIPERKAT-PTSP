@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 
 const DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-export const LiveClock = () => {
+export const LiveClock = memo(() => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -30,4 +30,6 @@ export const LiveClock = () => {
       </div>
     </div>
   );
-};
+});
+
+LiveClock.displayName = 'LiveClock';

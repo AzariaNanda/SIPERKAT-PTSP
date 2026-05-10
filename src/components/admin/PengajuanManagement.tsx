@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { 
-  ClipboardList, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, 
-  Clock, X, Check, MessageSquare, Pencil, Calendar, FileDown, AlertTriangle 
+import {
+  ClipboardList, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  Clock, X, Check, MessageSquare, Pencil, Calendar, FileDown, AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -31,7 +31,7 @@ export const PengajuanManagement = () => {
   const [isRejectOpen, setIsRejectOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
-  
+
   const currentYear = new Date().getFullYear();
 
   // Fungsi helper untuk mendapatkan nama aset agar tampilan tabel rapi
@@ -85,14 +85,14 @@ export const PengajuanManagement = () => {
 
       if (conflictName) {
         // Tampilkan Notifikasi Error dan Batalkan Proses
-        toast.error("GAGAL MENYETUJUI!", { 
+        toast.error("GAGAL MENYETUJUI!", {
           description: `Jadwal ini bentrok dengan ${conflictName} yang sudah disetujui.`,
           duration: 4000
         });
-        return; 
+        return;
       }
     }
-    
+
     await updateStatus.mutateAsync({ id, status, catatan_admin: note });
     setIsRejectOpen(false);
     setReason('');
@@ -102,6 +102,14 @@ export const PengajuanManagement = () => {
     if (filterType === 'all') return peminjamanList;
     return peminjamanList.filter(item => item.jenis_asset === filterType);
   }, [peminjamanList, filterType]);
+
+  const conflictMap = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const item of peminjamanList) {
+      map.set(item.id, getConflictOwner(item));
+    }
+    return map;
+  }, [peminjamanList]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   const paginatedList = useMemo(() => {
@@ -125,7 +133,7 @@ export const PengajuanManagement = () => {
             </div>
             Manajemen Pengajuan
           </CardTitle>
-          
+
           <div className="flex flex-wrap items-center justify-center gap-3 w-full lg:w-auto">
             <Tabs value={filterType} onValueChange={(v) => { setFilterType(v); setCurrentPage(1); }} className="w-full lg:w-auto">
               <TabsList className="grid grid-cols-3 h-11 rounded-xl bg-slate-200/50 p-1 border border-slate-200">
@@ -136,8 +144,8 @@ export const PengajuanManagement = () => {
             </Tabs>
 
             {filterType === 'all' && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   if (peminjamanList.length === 0) return toast.error("DATA KOSONG");
                   exportAllDataSeparated(peminjamanList, currentYear, kendaraanList, ruanganList);
@@ -148,10 +156,10 @@ export const PengajuanManagement = () => {
                 <FileDown className="w-4 h-4 mr-2" /> Export Semua
               </Button>
             )}
-            
+
             {filterType === 'kendaraan' && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   const data = peminjamanList.filter(p => p.jenis_asset === 'kendaraan');
                   if (data.length === 0) return toast.error("DATA KENDARAAN KOSONG");
@@ -165,8 +173,8 @@ export const PengajuanManagement = () => {
             )}
 
             {filterType === 'ruangan' && (
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   const data = peminjamanList.filter(p => p.jenis_asset === 'ruangan');
                   if (data.length === 0) return toast.error("DATA RUANGAN KOSONG");
@@ -196,8 +204,7 @@ export const PengajuanManagement = () => {
           </TableHeader>
           <TableBody>
             {paginatedList.map((item, index) => {
-              // --- CEK KONFLIK PER BARIS ---
-              const conflictOwner = getConflictOwner(item);
+              const conflictOwner = conflictMap.get(item.id) ?? null;
               const isConflict = !!conflictOwner;
 
               return (
@@ -220,7 +227,7 @@ export const PengajuanManagement = () => {
                       {getAssetName(item.jenis_asset, item.asset_id)}
                     </div>
                     <div className="text-[10px] flex items-center gap-1.5 text-slate-500 font-bold uppercase">
-                      <Clock className="w-3 h-3 text-slate-300"/> {item.tgl_mulai} | {item.jam_mulai} - {item.jam_selesai}
+                      <Clock className="w-3 h-3 text-slate-300" /> {item.tgl_mulai} | {item.jam_mulai} - {item.jam_selesai}
                     </div>
 
                     {/* --- VISUALISASI JIKA BENTROK --- */}
@@ -240,15 +247,14 @@ export const PengajuanManagement = () => {
                     <div className="flex flex-col items-center gap-2">
                       {item.status === 'Pending' || item.status === 'Konflik' ? (
                         <div className="flex gap-1.5 bg-white p-1.5 rounded-xl border shadow-sm">
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             // Tombol Berubah Warna jika Bentrok
-                            className={`h-8 text-[9px] font-black px-4 uppercase tracking-widest ${
-                              isConflict 
-                              ? 'bg-yellow-500 hover:bg-red-600 text-white shadow-red-200' 
-                              : 'bg-green-600 hover:bg-green-700 text-white'
-                            }`} 
-                            onClick={(  ) => handleAction(item.id, 'Disetujui')}
+                            className={`h-8 text-[9px] font-black px-4 uppercase tracking-widest ${isConflict
+                                ? 'bg-yellow-500 hover:bg-red-600 text-white shadow-red-200'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                              }`}
+                            onClick={() => handleAction(item.id, 'Disetujui')}
                           >
                             {isConflict ? 'SETUJU' : 'SETUJU'}
                           </Button>
@@ -260,7 +266,7 @@ export const PengajuanManagement = () => {
                         <div className="flex items-center gap-3">
                           <StatusBadge status={item.status} />
                           <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-slate-200 text-slate-400 hover:text-primary transition-all" onClick={() => handleAction(item.id, 'Pending')}>
-                            <Pencil className="w-3.5 h-3.5"/>
+                            <Pencil className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       )}
@@ -286,7 +292,7 @@ export const PengajuanManagement = () => {
             )}
           </TableBody>
         </Table>
-        
+
         <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-slate-50/50 border-t gap-4">
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tampilkan:</span>
@@ -320,21 +326,21 @@ export const PengajuanManagement = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <Textarea 
-              placeholder="Berikan alasan kenapa ditolak..." 
-              value={reason} 
-              onChange={(e) => setReason(e.target.value)} 
-              className="min-h-[120px] bg-slate-50 border-2 border-slate-200 text-sm font-black focus:ring-primary rounded-xl placeholder:font-normal" 
+            <Textarea
+              placeholder="Berikan alasan kenapa ditolak..."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="min-h-[120px] bg-slate-50 border-2 border-slate-200 text-sm font-black focus:ring-primary rounded-xl placeholder:font-normal"
             />
           </div>
           <DialogFooter className="flex items-center justify-end gap-4">
             <Button variant="ghost" onClick={() => setIsRejectOpen(false)} className="font-black text-xs uppercase tracking-tighter text-slate-500">
               BATAL
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => selectedId && handleAction(selectedId, 'Ditolak', reason)} 
-              disabled={!reason} 
+            <Button
+              variant="destructive"
+              onClick={() => selectedId && handleAction(selectedId, 'Ditolak', reason)}
+              disabled={!reason}
               className="font-black text-xs uppercase tracking-tighter shadow-xl shadow-red-200 h-11 px-8 rounded-xl"
             >
               KONFIRMASI TOLAK
