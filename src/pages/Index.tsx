@@ -174,12 +174,13 @@ const LazyFallback = () => (
 );
 
 const MainApp = () => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, role } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-primary animate-pulse tracking-widest uppercase">SIPERKAT</div>;
 
   const isMainAdmin = user?.email === 'subbagumpeg.dpmptspbms@gmail.com';
+  const canManageWhitelist = role === 'admin'; // Any admin can manage whitelist
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -195,22 +196,18 @@ const MainApp = () => {
                   <TabsTrigger value="pengajuan" className="gap-2 font-black text-xs uppercase"><ClipboardList className="w-4 h-4" />Pengajuan</TabsTrigger>
                   <TabsTrigger value="kendaraan" className="gap-2 font-black text-xs uppercase"><Car className="w-4 h-4" />Kendaraan</TabsTrigger>
                   <TabsTrigger value="ruangan" className="gap-2 font-black text-xs uppercase"><Home className="w-4 h-4" />Ruangan</TabsTrigger>
-                  {/* TAB PEGAWAI: Hanya tampil untuk Admin Utama */}
-                  {isMainAdmin && (
-                    <TabsTrigger value="pegawai" className="gap-2 font-black text-xs uppercase text-primary">
-                      <Users className="w-4 h-4" /> Pegawai
-                    </TabsTrigger>
-                  )}
+                  {/* TAB PEGAWAI: Tampil untuk semua Admin */}
+                  <TabsTrigger value="pegawai" className="gap-2 font-black text-xs uppercase text-primary">
+                    <Users className="w-4 h-4" /> Pegawai
+                  </TabsTrigger>
                 </TabsList>
               </div>
               <TabsContent value="dashboard"><Dashboard isAdmin={true} /></TabsContent>
               <TabsContent value="pengajuan"><PengajuanManagement /></TabsContent>
               <TabsContent value="kendaraan"><KendaraanManagement /></TabsContent>
               <TabsContent value="ruangan"><RuanganManagement /></TabsContent>
-              {/* KONTEN PEGAWAI: Hanya aktif untuk Admin Utama */}
-              {isMainAdmin && (
-                <TabsContent value="pegawai"><PegawaiManagement /></TabsContent>
-              )}
+              {/* KONTEN PEGAWAI: Tampil untuk semua Admin, kontrol edit hanya Admin Utama */}
+              <TabsContent value="pegawai"><PegawaiManagement isMainAdmin={isMainAdmin} userRole={role} /></TabsContent>
             </Tabs>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>

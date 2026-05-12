@@ -7,6 +7,7 @@ import {
 } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 type AppRole = "admin" | "user" | null;
@@ -43,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   const fetchUserRole = async (userId: string): Promise<AppRole> => {
     try {
@@ -66,7 +68,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (ALWAYS_ALLOWED_EMAILS.includes(cleanEmail)) return true;
 
     try {
-      // Simple timeout wrapper
       let timeoutId: NodeJS.Timeout | null = null;
       
       const rpcPromise = supabase
@@ -130,7 +131,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!mounted) return;
 
           if (isAllowed === true) {
-            const userRole = await fetchUserRole(currentSession.user.id);
+            // If email is in always allowed list, give admin role
+            let userRole: AppRole = "user";
+            const cleanEmail = currentSession.user.email?.toLowerCase().trim() || "";
+            if (ALWAYS_ALLOWED_EMAILS.includes(cleanEmail)) {
+              userRole = "admin";
+            } else {
+              userRole = await fetchUserRole(currentSession.user.id);
+            }
             if (mounted) {
               setSession(currentSession);
               setUser(currentSession.user);
@@ -203,12 +211,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
 
-    if (error) {
-      toast.error("Logout gagal. Silakan coba lagi.");
-    } else {
+      if (error) {
+        toast.error("Logout gagal. Silakan coba lagi.");
+        return;
+      }
+
+      // Clear all React Query cache on logout
+      queryClient.clear();
+      
+      // Reset auth state explicitly
+      setUser(null);
+      setSession(null);
+      setRole(null);
+      
       toast.success("Logout berhasil.");
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast.error("Terjadi kesalahan saat logout.");
     }
   };
 

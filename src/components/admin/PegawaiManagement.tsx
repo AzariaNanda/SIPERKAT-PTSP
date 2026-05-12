@@ -11,7 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export const PegawaiManagement = () => {
+interface PegawaiManagementProps {
+  isMainAdmin: boolean;
+  userRole?: string;
+}
+
+export const PegawaiManagement = ({ isMainAdmin, userRole }: PegawaiManagementProps) => {
   const [whitelist, setWhitelist] = useState<any[]>([]);
   const [newEmail, setNewEmail] = useState('');
   const [bulkEmails, setBulkEmails] = useState('');
@@ -99,16 +104,23 @@ export const PegawaiManagement = () => {
     try {
       // 1. Update tabel Whitelist (Tampilan Dashboard Admin)
       const { error: wError } = await supabase.from('pegawai_whitelist').update({ role: newRole }).eq('email', email);
-      if (wError) throw wError;
+      if (wError) {
+        console.error('Whitelist update error:', wError);
+        throw wError;
+      }
 
       // 2. REVISI: Update hak akses nyata di tabel user_roles (Sinkronisasi Role Instan)
-      // Kita panggil RPC sync_role_by_email agar user tidak perlu login ulang
-      await supabase.rpc('sync_role_by_email', { _email: email, _new_role: newRole });
+      const { error: rpcError } = await supabase.rpc('sync_role_by_email', { _email: email, _new_role: newRole });
+      if (rpcError) {
+        console.error('RPC sync error:', rpcError);
+        throw rpcError;
+      }
       
       toast.success(`Role ${email} diubah menjadi ${newRole.toUpperCase()}`);
       fetchWhitelist();
-    } catch (error) {
-      toast.error("Gagal sinkronisasi role. Pastikan Database RPC aktif.");
+    } catch (error: any) {
+      console.error('toggleRole error:', error);
+      toast.error("Gagal sinkronisasi role. Periksa permissions atau RPC: " + error.message);
     }
   };
 
@@ -117,11 +129,16 @@ export const PegawaiManagement = () => {
     if (!confirm(`Cabut akses untuk ${email}? User akan logout otomatis.`)) return;
     
     try {
-      await supabase.from('pegawai_whitelist').delete().eq('email', email);
+      const { error } = await supabase.from('pegawai_whitelist').delete().eq('email', email);
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
       toast.success("Akses dicabut.");
       fetchWhitelist();
-    } catch (error) {
-      toast.error("Gagal menghapus.");
+    } catch (error: any) {
+      console.error('handleDelete error:', error);
+      toast.error("Gagal menghapus. " + error.message);
     }
   };
 
@@ -138,6 +155,13 @@ export const PegawaiManagement = () => {
 
   return (
     <div className="space-y-6">
+      {userRole !== 'admin' && (
+        <div className="flex items-center gap-3 px-5 py-4 bg-blue-50 border border-blue-200 rounded-2xl text-blue-700">
+          <ShieldCheck className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm font-semibold">Anda dapat menambahkan email ke whitelist. Role={userRole}. Edit & Delete hanya untuk admin.</p>
+        </div>
+      )}
+
       <div className="grid lg:grid-cols-3 gap-6">
         <Card className="border-none shadow-xl bg-white rounded-3xl overflow-hidden lg:col-span-1">
           <CardHeader className="bg-slate-50 border-b p-5"><CardTitle className="text-xs font-black uppercase flex items-center gap-2 text-slate-600"><UserPlus className="w-4 h-4" /> Tambah Manual</CardTitle></CardHeader>
@@ -179,7 +203,7 @@ export const PegawaiManagement = () => {
                   <TableHead className="font-black text-[10px] uppercase">Email Pegawai</TableHead>
                   <TableHead className="font-black text-[10px] uppercase text-center">Status Akun</TableHead>
                   <TableHead className="font-black text-[10px] uppercase text-center">Hak Akses</TableHead>
-                  <TableHead className="text-right pr-8 font-black text-[10px] uppercase">Kontrol</TableHead>
+                  {userRole === 'admin' && <TableHead className="text-right pr-8 font-black text-[10px] uppercase">Kontrol</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -196,14 +220,16 @@ export const PegawaiManagement = () => {
                     <TableCell className="text-center">
                       <span className={`text-[9px] px-3 py-1 rounded-full font-black uppercase transition-all ${p.role === 'admin' ? 'bg-primary text-white shadow-md' : 'bg-slate-100 text-slate-500'}`}>{p.role}</span>
                     </TableCell>
-                    <TableCell className="text-right pr-8">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" disabled={p.email === MAIN_ADMIN_EMAIL} className="text-[9px] font-black uppercase h-8" onClick={() => toggleRole(p.email, p.role)}>Ubah Role</Button>
-                        {p.email !== MAIN_ADMIN_EMAIL && (
-                          <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-500 h-8 w-8 transition-all rounded-xl" onClick={() => handleDelete(p.email)}><Trash2 className="w-4 h-4" /></Button>
-                        )}
-                      </div>
-                    </TableCell>
+                    {userRole === 'admin' && (
+                      <TableCell className="text-right pr-8">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" disabled={p.email === MAIN_ADMIN_EMAIL} className="text-[9px] font-black uppercase h-8" onClick={() => toggleRole(p.email, p.role)}>Ubah Role</Button>
+                          {p.email !== MAIN_ADMIN_EMAIL && (
+                            <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-500 h-8 w-8 transition-all rounded-xl" onClick={() => handleDelete(p.email)}><Trash2 className="w-4 h-4" /></Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
