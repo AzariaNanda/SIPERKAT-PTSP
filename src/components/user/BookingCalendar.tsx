@@ -56,10 +56,10 @@ export const BookingCalendar = ({
     return { approved, pending, conflict };
   }, [relevantBookings]);
 
-  // 3. Styling Warna Kalender (Hijau = Sedang dipakai, Kuning = Menunggu)
+  // 3. Styling Warna Kalender (Merah = Tidak Tersedia/Booked, Kuning = Pending/Booked juga)
   const modifiersStyles = {
-    approved: { backgroundColor: '#e1c0a3', color: '#991b1b', fontWeight: 'bold', borderRadius: '8px' },
-    pending: { backgroundColor: '#fef9c3', color: '#854d0e', fontWeight: 'bold', borderRadius: '8px' },
+    approved: { backgroundColor: '#fecaca', color: '#7f1d1d', fontWeight: 'bold', borderRadius: '8px' },
+    pending: { backgroundColor: '#fbbf24', color: '#78350f', fontWeight: 'bold', borderRadius: '8px' },
   };
 
   // 4. Detail jadwal pada tanggal yang diklik
@@ -97,10 +97,10 @@ export const BookingCalendar = ({
         {/* Legend/Keterangan Warna */}
         <div className="flex flex-wrap gap-3 mt-3">
           <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-slate-500">
-            <div className="w-2.5 h-2.5 rounded-full bg-red-200 border border-red-400" /> Sedang dipakai
+            <div className="w-2.5 h-2.5 rounded-full bg-red-300 border border-red-500" /> Tidak Tersedia (Disetujui)
           </div>
           <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-slate-500">
-            <div className="w-2.5 h-2.5 rounded-full bg-yellow-200 border border-yellow-400" /> Menunggu
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-600" /> Tidak Tersedia (Pending)
           </div>
         </div>
       </CardHeader>
@@ -133,9 +133,9 @@ export const BookingCalendar = ({
                     <span className="font-black text-xs text-slate-700">{b.jam_mulai} - {b.jam_selesai}</span>
                     <Badge className={`text-[9px] font-black uppercase px-2 h-5 border-none ${
                       b.status === 'Disetujui' ? 'bg-red-600' : 
-                      b.status === 'Konflik' ? 'bg-red-600' : 'bg-yellow-500 text-white'
+                      b.status === 'Konflik' ? 'bg-red-600' : 'bg-amber-500 text-white'
                     }`}>
-                      {b.status === 'Disetujui' ? 'Sedang dipakai' : b.status}
+                      {b.status === 'Disetujui' ? '❌ Tidak Tersedia' : b.status === 'Pending' ? '⏳ Tidak Tersedia' : b.status}
                     </Badge>
                   </div>
                   <p className="text-[11px] font-bold text-slate-600 uppercase truncate">{b.nama_pemohon}</p>

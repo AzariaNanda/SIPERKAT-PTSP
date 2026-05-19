@@ -46,7 +46,7 @@ export const PeminjamanForm = () => {
       return;
     }
 
-    // 2. DETEKSI BENTROK JADWAL (Logika Global)
+    // 2. DETEKSI BENTROK JADWAL (Logika Global - FIRST COME FIRST SERVED)
     const conflicts = checkScheduleConflict({
       asset_id: formData.asset_id,
       tgl_mulai: formData.tgl_mulai,
@@ -54,25 +54,18 @@ export const PeminjamanForm = () => {
       jam_selesai: formData.jam_selesai,
     });
 
-    // 🔴 CASE 2: BENTROK DENGAN STATUS APPROVED (BLOCK!)
-    const approvedConflict = conflicts.find(c => c.status === 'Disetujui');
-    if (approvedConflict) {
-      toast.error(`JADWAL BENTROK DENGAN ${approvedConflict.nama_pemohon.toUpperCase()}`, {
-        description: `Sudah disetujui untuk jam ${approvedConflict.jam_mulai} - ${approvedConflict.jam_selesai}`,
-        duration: 5000,
+    // 🔴 BLOCK JIKA ADA CONFLICT DENGAN STATUS APAPUN (Approved atau Pending)
+    // Prioritas: Siapa yang booking duluan dapat haknya
+    if (conflicts.length > 0) {
+      const conflict = conflicts[0]; // Ambil conflict pertama
+      const statusText = conflict.status === 'Disetujui' ? 'Sedang dipakai' : conflict.status;
+      
+      toast.error(`❌ JADWAL TIDAK TERSEDIA`, {
+        description: `${conflict.nama_pemohon} sudah memesan waktu ${conflict.jam_mulai} - ${conflict.jam_selesai} (${statusText}). Silakan pilih waktu lain.`,
+        duration: 6000,
         style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171' }
       });
-      return; // STOP SUBMIT
-    }
-
-    // 🟡 CASE 1: BENTROK DENGAN STATUS PENDING (WARNING)
-    const pendingConflict = conflicts.find(c => c.status === 'Pending' || c.status === 'Menunggu');
-    if (pendingConflict) {
-      toast.warning('JADWAL BENTROK DENGAN PENGAJUAN LAIN', {
-        description: "Ada pengajuan lain yang berstatus PENDING di jam ini. Anda tetap bisa lanjut.",
-        duration: 5000,
-        style: { background: '#fef9c3', color: '#854d0e', border: '1px solid #facc15' }
-      });
+      return; // STOP SUBMIT - Block apapun conflict status
     }
 
     // 3. PROSES SUBMIT

@@ -59,19 +59,19 @@ export const PengajuanManagement = () => {
     const startCurrent = toDate(currentItem.tgl_mulai, currentItem.jam_mulai);
     const endCurrent = toDate(currentItem.tgl_selesai, currentItem.jam_selesai);
 
-    // Cari jadwal lain yang SUDAH DISETUJUI dan BENTROK
-    const conflict = peminjamanList.find(approved => {
-      // Syarat 1: Status harus Disetujui, Aset Sama, dan Bukan item itu sendiri
-      if (approved.status !== 'Disetujui') return false;
-      if (approved.asset_id !== currentItem.asset_id) return false;
-      if (approved.id === currentItem.id) return false;
+    // Cari jadwal lain yang SUDAH DISETUJUI ATAU PENDING dan BENTROK (First Come First Served)
+    const conflict = peminjamanList.find(other => {
+      // Syarat 1: Status harus Disetujui atau Pending, Aset Sama, dan Bukan item itu sendiri
+      if (other.status !== 'Disetujui' && other.status !== 'Pending') return false;
+      if (other.asset_id !== currentItem.asset_id) return false;
+      if (other.id === currentItem.id) return false;
 
       // Syarat 2: Cek Tumpang Tindih Waktu (Overlap Logic)
-      const startApproved = toDate(approved.tgl_mulai, approved.jam_mulai);
-      const endApproved = toDate(approved.tgl_selesai, approved.jam_selesai);
+      const startOther = toDate(other.tgl_mulai, other.jam_mulai);
+      const endOther = toDate(other.tgl_selesai, other.jam_selesai);
 
       // Rumus Overlap: (Start A < End B) && (End A > Start B)
-      return startApproved < endCurrent && endApproved > startCurrent;
+      return startOther < endCurrent && endOther > startCurrent;
     });
 
     return conflict ? conflict.nama_pemohon : null;
@@ -84,10 +84,27 @@ export const PengajuanManagement = () => {
       const conflictName = item ? getConflictOwner(item) : null;
 
       if (conflictName) {
+        // Cari conflict item untuk mendapat status-nya
+        const toDate = (dateStr: string, timeStr: string) => new Date(`${dateStr}T${timeStr}`);
+        const startCurrent = toDate(item.tgl_mulai, item.jam_mulai);
+        const endCurrent = toDate(item.tgl_selesai, item.jam_selesai);
+        
+        const conflictItem = peminjamanList.find(other => {
+          if (other.status !== 'Disetujui' && other.status !== 'Pending') return false;
+          if (other.asset_id !== item.asset_id) return false;
+          if (other.id === item.id) return false;
+          const startOther = toDate(other.tgl_mulai, other.jam_mulai);
+          const endOther = toDate(other.tgl_selesai, other.jam_selesai);
+          return startOther < endCurrent && endOther > startCurrent;
+        });
+
+        const conflictStatus = conflictItem?.status === 'Disetujui' ? 'sudah disetujui' : 'masih pending';
+        
         // Tampilkan Notifikasi Error dan Batalkan Proses
-        toast.error("GAGAL MENYETUJUI!", {
-          description: `Jadwal ini bentrok dengan ${conflictName} yang sudah disetujui.`,
-          duration: 4000
+        toast.error("❌ GAGAL MENYETUJUI!", {
+          description: `Jadwal bentrok dengan ${conflictName} (${conflictStatus}). Penolakan direkomendasikan.`,
+          duration: 5000,
+          style: { background: '#fee2e2', color: '#991b1b', border: '1px solid #f87171' }
         });
         return;
       }
